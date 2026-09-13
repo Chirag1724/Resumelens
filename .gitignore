@@ -1,24 +1,243 @@
-# Compiled class file
+# ResumeLens — .gitignore
+# Production-quality ignore rules for a public / open-source repository.
+# Sections are ordered by technology layer; each section is self-contained.
+
+
+# JAVA / MAVEN / SPRING BOOT  (backend/)
+
+# Compiled bytecode
 *.class
 
-# Log file
+# Maven build output
+target/
+
+# Gradle build output (kept in case Gradle is adopted later)
+build/
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+
+# IntelliJ IDEA module files (generated per-project)
+*.iml
+
+# Spring Boot: local-only config overrides
+# application.yml (the template) IS committed; local overrides are not.
+backend/src/main/resources/application-local.yml
+backend/src/main/resources/application-local.properties
+backend/src/main/resources/application-dev.properties
+backend/src/main/resources/application-prod.properties
+
+# Java log files and directories
 *.log
+logs/
 
-# BlueJ files
-*.ctxt
+# Java heap dumps and JVM crash logs
+hs_err_pid*
+replay_pid*
+*.hprof
 
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
+# Jar / War / packaging artifacts
 *.jar
 *.war
 *.nar
 *.ear
-*.zip
-*.tar.gz
-*.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
+# Checkstyle / PMD / SpotBugs reports
+checkstyle-result.xml
+pmd.xml
+spotbugsXml.xml
+
+# Maven wrapper metadata (keep the wrapper scripts, ignore local state)
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+
+# REACT / NODE / VITE  (frontend/)
+
+# Dependencies — never commit node_modules
+node_modules/
+frontend/node_modules/
+
+# Vite / React build output
+dist/
+frontend/dist/
+
+# Vite dev-server cache
+.vite/
+frontend/.vite/
+
+# Package manager debug/lock logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Optional npm cache metadata
+.npm
+
+# TypeScript incremental compilation cache (if TS is added later)
+*.tsbuildinfo
+
+# Storybook build output (if added later)
+storybook-static/
+
+
+# ENVIRONMENT AND SECRETS  (project-wide safety net)
+
+# All .env files — NEVER commit real credentials
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+backend/.env
+
+# DO NOT ignore .env.example — commit it as a template:
+# !.env.example
+# !frontend/.env.example
+# !backend/.env.example
+
+# Generic secret / credential file safety net
+*secret*
+*secrets*
+*credential*
+*credentials*
+*apikey*
+*api_key*
+*.pem
+*.p12
+*.keystore
+*.jks
+
+# Spring Boot local database credential override (if used outside application-local.yml)
+db.properties
+database.properties
+
+
+# DATABASE
+
+# Local scratch / seed dump files — NOT versioned migration scripts.
+# Flyway migration scripts in backend/src/main/resources/db/migration/ are committed.
+*.sql.bak
+*_dump.sql
+*_seed_local.sql
+scratch/*.sql
+
+# Local H2 embedded database files (if used for dev/testing)
+*.db
+*.mv.db
+*.trace.db
+
+
+# IDE AND EDITOR FILES
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# VS Code
+# .vscode/extensions.json is intentionally NOT ignored so the team can
+# recommend extensions. All other VS Code local state is ignored.
+.vscode/*
+!.vscode/extensions.json
+
+# Eclipse
+.classpath
+.project
+.settings/
+.factorypath
+bin/
+
+# NetBeans
+nbproject/private/
+nbbuild/
+nbdist/
+nbactions.xml
+nb-configuration.xml
+
+# STS / Spring Tools Suite
+.springBeans
+
+# vim/neovim swap files
+*.swp
+*.swo
+*~
+
+# Emacs
+\#*\#
+.\#*
+
+
+# OPERATING SYSTEM FILES
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.nfs*
+
+
+# GRAPHIFY / AI TOOLING ARTIFACTS
+
+# Graphify knowledge graph — fully regenerable from docs/ source files.
+# The docs/ markdown files themselves ARE committed; only the generated cache is not.
+docs/graphify-out/
+
+# Antigravity IDE local agent state (stored outside project root normally,
+# but guard against any local sidecar that lands inside the workspace)
+.agents/.cache/
+.gemini/
+
+# Any other AI-generated output directories that might appear
+.aider*
+.continue/
+
+
+# GENERATED / TEMPORARY FILES
+
+# Generated PDF reports produced during local testing runs
+*.pdf
+test-output/
+generated-reports/
+
+# JUnit / Surefire / Failsafe test reports (regenerated on every test run)
+backend/target/surefire-reports/
+backend/target/failsafe-reports/
+
+# Jacoco coverage reports
+**/jacoco.exec
+**/jacoco/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Scratch / personal notes that should never be committed
+scratch/
+SCRATCH.md
+TODO.local.md
