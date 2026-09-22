@@ -88,20 +88,47 @@ docs/       Architecture documentation, scoring rules, conventions, and decision
    CREATE DATABASE resumelens CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
    ```
 
-3. Set the required environment variables. Database credentials are never hardcoded in the committed configuration files.
+3. Set up your environment variables.
+
+   Copy the example file and fill in real values:
 
    ```bash
-   export DB_URL=jdbc:mysql://localhost:3306/resumelens
-   export DB_USERNAME=your_mysql_user
+   cp backend/.env.example backend/.env
+   # Edit backend/.env with your actual database credentials and JWT secret
+   ```
+
+   > **Important:** Spring Boot does **not** load `.env` files natively. Do **not** add a dotenv library — instead, export the variables in your shell before running the application, or configure them in your IDE run configuration.
+
+   **Shell (Linux / macOS / Git Bash):**
+   ```bash
+   export DB_URL=jdbc:mysql://localhost:3306/resumelens?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+   export DB_USERNAME=root
    export DB_PASSWORD=your_mysql_password
-   export JWT_SECRET=a_long_random_secret_string
+   export JWT_SECRET=your_long_random_secret_here
+   ```
+
+   **PowerShell (Windows):**
+   ```powershell
+   $env:DB_URL      = "jdbc:mysql://localhost:3306/resumelens?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+   $env:DB_USERNAME = "root"
+   $env:DB_PASSWORD = "your_mysql_password"
+   $env:JWT_SECRET  = "your_long_random_secret_here"
+   ```
+
+   **IntelliJ IDEA:** Run → Edit Configurations → your Spring Boot config → Environment Variables.
+
+   **VS Code:** Add an `"env"` block to your `launch.json` run configuration.
+
+   The `JWT_SECRET` must be at least 32 characters. Generate a secure value with:
+   ```bash
+   openssl rand -base64 48
    ```
 
 4. Run the backend.
 
    ```bash
    cd backend
-   mvn spring-boot:run
+   ./mvnw spring-boot:run
    ```
 
    The API will be available at `http://localhost:8080`. The health endpoint at `/api/v1/health` returns `{ "status": "UP" }` when the server is ready.

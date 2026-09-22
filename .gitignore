@@ -3,6 +3,15 @@
 # Sections are ordered by technology layer; each section is self-contained.
 
 
+# ENVIRONMENT / SECRETS
+# .env contains real credentials — never commit it.
+.env
+backend/.env
+# .env.example is intentionally committed as a safe reference template.
+!.env.example
+!backend/.env.example
+
+
 # JAVA / MAVEN / SPRING BOOT  (backend/)
 
 # Compiled bytecode

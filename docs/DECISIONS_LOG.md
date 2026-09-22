@@ -43,3 +43,8 @@
 - **2026-09-13** — Chose **iText Community (AGPL, 8.x)** for PDF report generation. Rationale: capable of producing structured, styled PDF output from Java without a paid licence under AGPL for an open-source project; encapsulated in a dedicated `ReportService` so the dependency is isolated and replaceable. If the project moves to a proprietary licence in future, iText's commercial licence or an alternative (e.g., OpenPDF) must be evaluated at that point.
 
 *Append new entries below this line as decisions evolve.*
+
+- **2026-09-22** — Removed fallback values from `DB_PASSWORD` and `JWT_SECRET` in `application.yml`. Previously `DB_PASSWORD` defaulted to an empty string and `JWT_SECRET` defaulted to a hardcoded placeholder string. Both are now required with no default, so the application fails fast at startup if either is missing rather than silently running with an insecure credential. `DB_URL` and `DB_USERNAME` retain their localhost defaults as neither is sensitive.
+
+- **2026-09-22** — Chose **shell/IDE environment variable export** over adding a `spring-dotenv` (or equivalent) library dependency for `.env` file loading. Rationale: Spring Boot reads OS environment variables natively via the `${VAR}` placeholder syntax already in use; adding a dotenv library would introduce a new runtime dependency solely to replicate a capability the shell already provides. Decision aligns with the Ponytail principle of using the fewest external dependencies necessary. A `.env.example` file is committed at `backend/.env.example` as a reference template; the real `.env` is gitignored and must never be committed.
+
