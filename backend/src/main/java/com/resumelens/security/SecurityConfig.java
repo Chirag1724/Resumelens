@@ -1,5 +1,6 @@
 package com.resumelens.security;
 
+import com.resumelens.entity.User;
 import com.resumelens.repository.UserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -56,7 +57,7 @@ public class SecurityConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         return email -> {
-            com.resumelens.entity.User user = userRepository.findByEmail(email)
+            User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
             return org.springframework.security.core.userdetails.User.builder()
                     .username(user.getEmail())

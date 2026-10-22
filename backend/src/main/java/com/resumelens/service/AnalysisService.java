@@ -91,7 +91,7 @@ public class AnalysisService {
 
         // Persist SectionScores
         persistSectionScore(matchResult, SectionScore.ATS_COMPATIBILITY, scores.atsScore(),
-            "ATS formatting and keyword compliance", scores.matchedKeywords(), scores.missingKeywords());
+            "ATS formatting and keyword compliance", List.of(), List.of());
         persistSectionScore(matchResult, SectionScore.SKILLS_VALIDATION, scores.skillsScore(),
             "Keyword and skill match against job description", scores.matchedKeywords(), scores.missingKeywords());
         persistSectionScore(matchResult, SectionScore.IMPACT_ACHIEVEMENTS, scores.impactScore(),

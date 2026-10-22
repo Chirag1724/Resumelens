@@ -11,10 +11,12 @@ import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.resumelens.entity.MatchResult;
 import com.resumelens.entity.SectionScore;
+import com.resumelens.exception.ResumeParseException;
 import com.resumelens.exception.ResourceNotFoundException;
 import com.resumelens.repository.MatchResultRepository;
 import com.resumelens.repository.SectionScoreRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayOutputStream;
 import java.util.List;
@@ -32,6 +34,7 @@ public class ReportGeneratorService {
     }
 
     /** Generates a PDF report for a given match result and returns the bytes. */
+    @Transactional(readOnly = true)
     public byte[] generatePdfReport(Long matchResultId) {
         MatchResult result = matchResultRepository.findById(matchResultId)
             .orElseThrow(() -> new ResourceNotFoundException("MatchResult", matchResultId));
@@ -68,8 +71,9 @@ public class ReportGeneratorService {
             doc.add(table);
             doc.add(new Paragraph(" "));
 
-            // Missing keywords
+            // Missing keywords — now only on SKILLS_VALIDATION section
             sections.stream()
+                .filter(s -> SectionScore.SKILLS_VALIDATION.equals(s.getSectionName()))
                 .filter(s -> s.getMissingKeywords() != null && !s.getMissingKeywords().isBlank())
                 .findFirst()
                 .ifPresent(s -> {
@@ -86,6 +90,8 @@ public class ReportGeneratorService {
                 "(Claude, ChatGPT, Gemini, or any other LLM) to receive a rewritten resume.")
                 .setFontSize(10).setItalic());
 
+        } catch (Exception e) {
+            throw new ResumeParseException("Failed to generate PDF report: " + e.getMessage(), e);
         }
         return baos.toByteArray();
     }

@@ -2,7 +2,6 @@ package com.resumelens.service;
 
 import com.resumelens.algorithm.SimilarityCalculator;
 import com.resumelens.algorithm.TfIdfCalculator;
-import com.resumelens.service.ResumeParserService;
 import org.springframework.stereotype.Service;
 
 import java.util.*;

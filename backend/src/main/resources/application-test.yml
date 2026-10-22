@@ -1,0 +1,26 @@
+# Test profile — overrides application.yml for all @ActiveProfiles("test") tests.
+# Uses H2 in-memory (MySQL-compatibility mode to handle LONGTEXT/TEXT column definitions).
+# JWT secret set directly so no DB_PASSWORD / JWT_SECRET env vars are required.
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL;NON_KEYWORDS=VALUE
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: false
+  flyway:
+    enabled: false   # Disable Flyway: MySQL-specific migrations don't run on H2
+
+app:
+  jwt:
+    secret: test-jwt-secret-key-minimum-32-characters-long
+    expiration-ms: 3600000

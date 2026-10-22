@@ -6,6 +6,7 @@ import com.resumelens.exception.ResourceNotFoundException;
 import com.resumelens.repository.MatchResultRepository;
 import com.resumelens.repository.SectionScoreRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
@@ -35,6 +36,7 @@ public class PromptBuilderService {
      * @param templateStyle one of: "Awesome-CV", "Deedy Resume", "Simple Single-Column"
      * @return the assembled prompt string
      */
+    @Transactional(readOnly = true)
     public String buildFixPrompt(Long matchResultId, String templateStyle) {
         MatchResult result = matchResultRepository.findById(matchResultId)
             .orElseThrow(() -> new ResourceNotFoundException("MatchResult", matchResultId));

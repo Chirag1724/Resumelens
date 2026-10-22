@@ -18,6 +18,13 @@ public class TfIdfCalculator {
         "you","your","he","she","they","their","not","no","as","up","out"
     );
 
+    // Generic JD filler terms that add noise to keyword ranking even with TF-IDF
+    private static final Set<String> JD_FILLER = Set.of(
+        "experience","team","work","ability","strong","required",
+        "excellent","knowledge","skills","good","must","role",
+        "position","candidate","year","years","including","within"
+    );
+
     /** TF: raw count of term in document normalised by document length. */
     public Map<String, Double> termFrequency(String text) {
         String[] tokens = tokenize(text);
@@ -68,12 +75,28 @@ public class TfIdfCalculator {
     }
 
     /**
-      Return top N terms by TF-IDF weight from a single document, using the document itself as the IDF corpus (single-doc baseline).
-      Single-doc IDF is a simplification; for multi-doc corpora pass the shared idf map. Upgrade path: pass corpus idf externally.
+     * Returns top N terms ranked by TF-IDF weight.
+     * IDF is computed using sentences/lines of the input as a mini-corpus so that
+     * terms ubiquitous across lines (generic words) receive a low IDF and are
+     * down-weighted relative to distinctive, line-specific terms.
+     * Generic JD filler terms are removed after ranking via JD_FILLER.
      */
     public List<String> topKeywords(String text, int topN) {
-        Map<String, Double> tf = termFrequency(text);
-        return tf.entrySet().stream()
+        if (text == null || text.isBlank()) return List.of();
+        // Each non-blank sentence/line is one document for IDF
+        // Split on: newline, period, !, ?, semicolon, bullet, en-dash, hyphen
+        List<String> lines = Arrays.stream(text.split("[\\n.!?;•–-]+"))
+                .map(String::trim)
+                .filter(l -> !l.isBlank())
+                .collect(Collectors.toList());
+        if (lines.isEmpty()) lines = List.of(text);
+
+        Map<String, Double> idfMap   = idf(lines);
+        Map<String, Double> tfidfVec = tfidfVector(text, idfMap);
+
+        return tfidfVec.entrySet().stream()
+                .filter(e -> !JD_FILLER.contains(e.getKey()))
+                .filter(e -> e.getValue() > 0.0)
                 .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
                 .limit(topN)
                 .map(Map.Entry::getKey)

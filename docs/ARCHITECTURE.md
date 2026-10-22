@@ -212,33 +212,37 @@ backend/
 
 ## REST API Endpoints
 
+> **Note:** For the full, authoritative request/response shapes, field types, and error status codes derived directly from live code, see **[API_CONTRACT.md](file:///c:/Users/LENOVO/Desktop/Resumelens/docs/API_CONTRACT.md)**.
+> For UI design specifications and product requirements, see **[FRONTEND_DESIGN.md](file:///c:/Users/LENOVO/Desktop/Resumelens/docs/FRONTEND_DESIGN.md)** and **[REQUIREMENTS.md](file:///c:/Users/LENOVO/Desktop/Resumelens/docs/REQUIREMENTS.md)**.
+
 All endpoints are prefixed: `/api/v1`
 
-### Analysis
-
+### Resume Ingestion (`/api/v1/resumes`)
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/v1/analysis` | Optional | Submit resume + JD; receive full scored result. Multipart form (file + JD text) or JSON body with raw text. |
-| `GET` | `/api/v1/analysis/{resultId}` | Optional | Retrieve a previously stored analysis result by ID. |
+| `POST` | `/api/v1/resumes/upload` | Optional (Guest/User) | Upload PDF/DOCX file (multipart). Returns generated `resumeId`. Links to user if JWT present. |
 
-### Authentication
-
+### Analysis & Reports (`/api/v1/analysis`)
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/v1/auth/register` | None | Register a new user account. |
-| `POST` | `/api/v1/auth/login` | None | Authenticate and receive a JWT token. |
-| `POST` | `/api/v1/auth/logout` | Required | Invalidate / blacklist the current token. |
+| `POST` | `/api/v1/analysis/match` | Public (Guest) | Matches resume against JD (`resumeId` + `rawJobDescription`). Returns full 6-dimension score, keywords, and suggestions. |
+| `GET` | `/api/v1/analysis/{matchResultId}` | Public (Guest) | Retrieves previously computed match result by ID. |
+| `GET` | `/api/v1/analysis/{matchResultId}/report` | Public (Guest) | Downloads generated iText PDF analysis report (`application/pdf`). |
+| `GET` | `/api/v1/analysis/{matchResultId}/fix-prompt` | Public (Guest) | Generates copyable LaTeX improvement prompt for external AI assistant. |
 
-### History (authenticated users only)
-
+### Authentication (`/api/v1/auth`)
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/api/v1/history` | Required | List all past analysis results for the logged-in user. |
-| `GET` | `/api/v1/history/{resultId}` | Required | Fetch a specific historical result. |
-| `DELETE` | `/api/v1/history/{resultId}` | Required | Delete a specific historical result. |
+| `POST` | `/api/v1/auth/register` | Public (Guest) | Register a new user account with email, password, and optional name. Returns JWT. |
+| `POST` | `/api/v1/auth/login` | Public (Guest) | Authenticate user credentials and receive JWT bearer token. |
 
-### Health
-
+### History (`/api/v1/history`)
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/api/v1/health` | None | Returns `{ "status": "UP" }` for liveness checks. |
+| `GET` | `/api/v1/history` | Authenticated | List all past analysis results for the logged-in user, ordered by date descending. |
+
+### Health (`/api/v1/health`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/v1/health` | Public (Guest) | Returns `{ "status": "UP" }` for health/liveness probes. |
+

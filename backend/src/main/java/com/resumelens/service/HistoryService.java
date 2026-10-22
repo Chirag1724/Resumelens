@@ -5,6 +5,7 @@ import com.resumelens.exception.ResourceNotFoundException;
 import com.resumelens.repository.MatchResultRepository;
 import com.resumelens.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,6 +22,7 @@ public class HistoryService {
         this.userRepository = userRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<HistoryItemResponse> getHistoryForUser(String email) {
         var user = userRepository.findByEmail(email)
             .orElseThrow(() -> new ResourceNotFoundException("User", email));

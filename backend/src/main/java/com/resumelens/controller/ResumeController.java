@@ -1,12 +1,8 @@
 package com.resumelens.controller;
 
 import com.resumelens.dto.response.ApiResponse;
-import com.resumelens.entity.Resume;
-import com.resumelens.entity.User;
 import com.resumelens.exception.InvalidInputException;
-import com.resumelens.repository.ResumeRepository;
-import com.resumelens.repository.UserRepository;
-import com.resumelens.service.ResumeParserService;
+import com.resumelens.service.ResumeService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -18,16 +14,10 @@ import java.util.Map;
 @RequestMapping("/api/v1/resumes")
 public class ResumeController {
 
-    private final ResumeParserService resumeParserService;
-    private final ResumeRepository resumeRepository;
-    private final UserRepository userRepository;
+    private final ResumeService resumeService;
 
-    public ResumeController(ResumeParserService resumeParserService,
-                            ResumeRepository resumeRepository,
-                            UserRepository userRepository) {
-        this.resumeParserService = resumeParserService;
-        this.resumeRepository = resumeRepository;
-        this.userRepository = userRepository;
+    public ResumeController(ResumeService resumeService) {
+        this.resumeService = resumeService;
     }
 
     /**
@@ -42,17 +32,9 @@ public class ResumeController {
             Authentication authentication) {
 
         if (file.isEmpty()) throw new InvalidInputException("Uploaded file is empty.");
-
-        String rawText = resumeParserService.extractText(file);
-
-        User user = null;
-        if (authentication != null && authentication.isAuthenticated()) {
-            user = userRepository.findByEmail(authentication.getName()).orElse(null);
-        }
-
-        Resume resume = resumeRepository.save(
-            new Resume(user, file.getOriginalFilename(), rawText, targetRole, experienceYears));
-
-        return ResponseEntity.ok(ApiResponse.success(Map.of("resumeId", resume.getId())));
+        String email = (authentication != null && authentication.isAuthenticated())
+                       ? authentication.getName() : null;
+        Long resumeId = resumeService.save(file, targetRole, experienceYears, email);
+        return ResponseEntity.ok(ApiResponse.success(Map.of("resumeId", resumeId)));
     }
 }
