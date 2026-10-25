@@ -49,7 +49,7 @@ public class SuggestionEngine {
      * Format: "Line text -> suggested replacement"
      */
     public List<String> detectWeakVerbs(String resumeText) {
-        String lower = resumeText.toLowerCase();
+        String lower = resumeText.toLowerCase(Locale.ROOT);
         List<String> findings = new ArrayList<>();
         WEAK_VERB_REPLACEMENTS.forEach((weak, strong) -> {
             int idx = 0;

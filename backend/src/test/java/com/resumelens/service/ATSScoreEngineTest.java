@@ -3,6 +3,7 @@ package com.resumelens.service;
 import com.resumelens.TestData;
 import com.resumelens.algorithm.SimilarityCalculator;
 import com.resumelens.algorithm.TfIdfCalculator;
+import com.resumelens.entity.SectionScore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -369,6 +370,48 @@ class ATSScoreEngineTest {
                 "Score 39.99 should be 'Poor Match'");
     }
 
+    // SECTION STATUS - shared threshold tests (85, 70, 55, 40)
+
+    @Test
+    void should_returnExcellentSectionStatus_atExactly85() {
+        assertEquals(SectionScore.EXCELLENT, SectionScore.deriveStatus(85.0));
+    }
+
+    @Test
+    void should_returnStrongSectionStatus_onePointBelow85() {
+        assertEquals(SectionScore.STRONG, SectionScore.deriveStatus(84.99));
+    }
+
+    @Test
+    void should_returnStrongSectionStatus_atExactly70() {
+        assertEquals(SectionScore.STRONG, SectionScore.deriveStatus(70.0));
+    }
+
+    @Test
+    void should_returnModerateSectionStatus_onePointBelow70() {
+        assertEquals(SectionScore.MODERATE, SectionScore.deriveStatus(69.99));
+    }
+
+    @Test
+    void should_returnModerateSectionStatus_atExactly55() {
+        assertEquals(SectionScore.MODERATE, SectionScore.deriveStatus(55.0));
+    }
+
+    @Test
+    void should_returnWeakSectionStatus_onePointBelow55() {
+        assertEquals(SectionScore.WEAK, SectionScore.deriveStatus(54.99));
+    }
+
+    @Test
+    void should_returnWeakSectionStatus_atExactly40() {
+        assertEquals(SectionScore.WEAK, SectionScore.deriveStatus(40.0));
+    }
+
+    @Test
+    void should_returnPoorSectionStatus_onePointBelow40() {
+        assertEquals(SectionScore.POOR, SectionScore.deriveStatus(39.99));
+    }
+
     // WEIGHTED SCORE — formula and rounding
 
     @Test
@@ -406,8 +449,184 @@ class ATSScoreEngineTest {
         String resume = "software engineer looking for opportunities";
         ATSScoreEngine.ScoreResult r = engine.score(resume, TestData.JD_FOREIGN_TERMS, false, false);
         assertTrue(r.atsScore() <= 60,
-                "Resume missing all sections + 0% keywords + no achievements should score ≤ 60 on ATS");
+                "Resume missing all sections + 0% keywords + no achievements should score <= 60 on ATS");
         assertEquals(0.0, r.impactScore(), 0.01,
                 "Resume with no bullet points should have impactScore 0");
+    }
+
+    // REQUIREMENT 2 TESTS — Hand-computed literals from docs/SCORING_RULES.md
+
+    @Test
+    void should_matchScoringRulesWeightsAndSumToOne() {
+        assertEquals(0.25, ATSScoreEngine.WEIGHT_ATS, 1e-9);
+        assertEquals(0.25, ATSScoreEngine.WEIGHT_SKILLS, 1e-9);
+        assertEquals(0.20, ATSScoreEngine.WEIGHT_IMPACT, 1e-9);
+        assertEquals(0.15, ATSScoreEngine.WEIGHT_PROJECT, 1e-9);
+        assertEquals(0.10, ATSScoreEngine.WEIGHT_WRITING, 1e-9);
+        assertEquals(0.05, ATSScoreEngine.WEIGHT_PROFESSIONAL, 1e-9);
+        assertEquals(1.0,
+                ATSScoreEngine.WEIGHT_ATS + ATSScoreEngine.WEIGHT_SKILLS +
+                ATSScoreEngine.WEIGHT_IMPACT + ATSScoreEngine.WEIGHT_PROJECT +
+                ATSScoreEngine.WEIGHT_WRITING + ATSScoreEngine.WEIGHT_PROFESSIONAL,
+                1e-9);
+    }
+
+    @Test
+    void should_computeHardcodedOverallScore_forFixedFixtureFromScoringRules() {
+        // TestData.GOOD_RESUME with TestData.JD_TWO_TERMS:
+        // ats = 100.0, skills = 100.0, impact = 0.0, project = 50.0 (neutral),
+        // writing = 100.0, professionalism = 100.0.
+        // Hand-computed literal overall score from SCORING_RULES.md:
+        // (100.0 * 0.25) + (100.0 * 0.25) + (0.0 * 0.20) + (50.0 * 0.15) + (100.0 * 0.10) + (100.0 * 0.05) = 72.50
+        ATSScoreEngine.ScoreResult r = engine.score(TestData.GOOD_RESUME, TestData.JD_TWO_TERMS, false, false);
+        assertEquals(72.50, r.overallScore(), 0.001,
+                "overallScore must equal 72.50 literal calculated by hand from SCORING_RULES.md");
+    }
+
+    @Test
+    void should_handleKeywordDensityBoundariesCorrectly() {
+        // 10 distinct technical keywords (length >= 6 to avoid accidental fuzzy match)
+        String jd10 = "kubernetes\ndocker\npostgres\nmongodb\ngraphql\nterraform\njenkins\ntypescript\nmicroservices\nrabbitmq";
+
+        // Exactly 30% keyword match (3 of 10 keywords: kubernetes, docker, postgres): gives -8 deduction, not -15
+        String resume30 = "EDUCATION\nEXPERIENCE\nSKILLS\nkubernetes docker postgres developer achieved 40% improvement";
+        ATSScoreEngine.ScoreResult r30 = engine.score(resume30, jd10, false, false);
+        assertEquals(92.0, r30.atsScore(), 0.01,
+                "Exactly 30% keyword density gives -8 deduction (100 - 8 = 92), not -15");
+
+        // Exactly 50% keyword match (5 of 10 keywords): gives no deduction (0)
+        String resume50 = "EDUCATION\nEXPERIENCE\nSKILLS\nkubernetes docker postgres mongodb graphql developer achieved 40% improvement";
+        ATSScoreEngine.ScoreResult r50 = engine.score(resume50, jd10, false, false);
+        assertEquals(100.0, r50.atsScore(), 0.01,
+                "Exactly 50% keyword density gives no deduction (100 - 0 = 100)");
+
+        // Just below 30% keyword match: 7 distinct keywords, 2 match -> 2/7 = 28.57% < 30%
+        String jd7 = "kubernetes\ndocker\npostgres\nmongodb\ngraphql\nterraform\njenkins";
+        String resumeBelow30 = "EDUCATION\nEXPERIENCE\nSKILLS\nkubernetes docker developer achieved 40% improvement";
+        ATSScoreEngine.ScoreResult rBelow30 = engine.score(resumeBelow30, jd7, false, false);
+        assertEquals(85.0, rBelow30.atsScore(), 0.01,
+                "Just below 30% keyword density (2/7 = 28.57%) gives -15 deduction (100 - 15 = 85)");
+    }
+
+    @Test
+    void isFuzzyMatchReturnsTrueAtThresholdAndFalseAtThresholdPlusOne() {
+        assertEquals(2, similarity.levenshteinDistance("java", "javaaa"));
+        assertTrue(similarity.isFuzzyMatch("java", "javaaa", 2),
+                "isFuzzyMatch returns true when distance equals threshold (2 == 2)");
+
+        assertEquals(3, similarity.levenshteinDistance("java", "javaaaa"));
+        assertFalse(similarity.isFuzzyMatch("java", "javaaaa", 2),
+                "isFuzzyMatch returns false when distance equals threshold + 1 (3 > 2)");
+    }
+
+    @Test
+    void should_floorAtsWritingAndProfessionalismAtZero_neverNegative() {
+        when(resumeParser.hasContactInfo(anyString())).thenReturn(false);
+
+        // Worst-case text hitting every deduction in ATS, Writing, and Professionalism:
+        // - No education, experience, skills headings (-24)
+        // - Contact info absent (-10)
+        // - Multi-column formatting risk (-10)
+        // - Graphics risk (-8)
+        // - Keyword density < 30% (-15)
+        // - No measurable achievements (-5)
+        // ATS total deductions: -72 -> score 28.0 (>= 0 floor)
+        //
+        // Writing deductions:
+        // - Sentence length > 35 words (-10)
+        // - First-person pronoun 'I' (-15)
+        // - 5 filler phrases (-15)
+        // - 3 over-repeated words (-15)
+        // - Passive voice > 40% (3 of 4 sentences = 75%) (-10)
+        // Writing total deductions: -65 -> score 35.0 (>= 0 floor)
+        //
+        // Professionalism deductions:
+        // - 4 spelling errors (-20)
+        // - Mixed date formats Jan 2020 and 01/2023 (-10)
+        // - Mixed bullets (-5)
+        // - Casual email cool420@ (-10)
+        // - Word count > 700 (-5)
+        // Professionalism total deductions: -50 -> score 50.0 (>= 0 floor)
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("The project was managed by the team. ");
+        sb.append("Tasks were implemented carefully. ");
+        sb.append("Work was delivered on schedule. ");
+        sb.append("I am responsible for coding and helped with testing and assisted in design and involved in planning and was part of review. ");
+        sb.append("repeatone repeatone repeatone repeatone repeatone repeatone ");
+        sb.append("repeattwo repeattwo repeattwo repeattwo repeattwo repeattwo ");
+        sb.append("repeatthree repeatthree repeatthree repeatthree repeatthree repeatthree ");
+        sb.append("recieve achievment managment developement ");
+        sb.append("Jan 2020 and 01/2023 ");
+        sb.append("- bullet one\n* bullet two\n• bullet three\n");
+        sb.append("cool420@example.com ");
+        sb.append(TestData.uniqueTokens(720));
+
+        ATSScoreEngine.ScoreResult r = engine.score(sb.toString(), TestData.JD_FOREIGN_TERMS, true, true);
+
+        assertEquals(28.0, r.atsScore(), 0.01, "ATS score must equal 28.0 literal worst-case score");
+        assertEquals(35.0, r.writingScore(), 0.01, "Writing score must equal 35.0 literal worst-case score");
+        assertEquals(50.0, r.professionalismScore(), 0.01, "Professionalism score must equal 50.0 literal worst-case score");
+
+        assertTrue(r.atsScore() >= 0.0, "ATS score must never be negative");
+        assertTrue(r.writingScore() >= 0.0, "Writing score must never be negative");
+        assertTrue(r.professionalismScore() >= 0.0, "Professionalism score must never be negative");
+    }
+
+    @Test
+    void should_computeSkillsScoreWithKnownMatchRatioAndCosineBonus_andCapAt100() {
+        // JD: "java python", Resume: "java"
+        // matched = 1 / 2 = 50.0 base score
+        // Cosine bonus hand-computed from docs/SCORING_RULES.md:
+        // idf(java) = 1.0, idf(python) = 1.4055
+        // cosine similarity = 0.5797 -> bonus = 5.80
+        // Expected skills score = 55.80
+        ATSScoreEngine.ScoreResult rPartial = engine.score("java", TestData.JD_TWO_TERMS, false, false);
+        assertEquals(55.80, rPartial.skillsScore(), 0.01,
+                "Skills score must equal base 50.0 + 5.80 cosine bonus = 55.80");
+
+        // When base score is 100.0, cosine bonus cannot exceed 100.0 cap
+        ATSScoreEngine.ScoreResult rFull = engine.score(TestData.GOOD_RESUME, TestData.JD_TWO_TERMS, false, false);
+        assertEquals(100.0, rFull.skillsScore(), 0.01,
+                "Skills score must be capped at 100.0");
+    }
+
+    @Test
+    void should_evaluateProjectQuality_2Of4Scores50_all4Scores100_andTwoProjectsAveraged() {
+        // Project 1: meets 2 of 4 criteria (has title, has tech stack "java") -> 2/4 = 50
+        String project1 = "Project Alpha\njava code";
+
+        // Project 2: meets all 4 criteria (title, tech stack "python", description >= 10 words, outcome "automated") -> 4/4 = 100
+        String project2 = "Project Beta\nBuilt an automated python tool that processes data across multiple servers daily";
+
+        // Test Project 1 alone -> scores 50.0
+        when(resumeParser.extractSections(anyString())).thenReturn(Map.of("PROJECTS", project1));
+        ATSScoreEngine.ScoreResult r1 = engine.score(TestData.GOOD_RESUME, TestData.JD_TWO_TERMS, false, false);
+        assertEquals(50.0, r1.projectScore(), 0.01,
+                "Project meeting 2 of 4 criteria must score 50.0");
+
+        // Test Project 2 alone -> scores 100.0
+        when(resumeParser.extractSections(anyString())).thenReturn(Map.of("PROJECTS", project2));
+        ATSScoreEngine.ScoreResult r2 = engine.score(TestData.GOOD_RESUME, TestData.JD_TWO_TERMS, false, false);
+        assertEquals(100.0, r2.projectScore(), 0.01,
+                "Project meeting all 4 criteria must score 100.0");
+
+        // Test two projects together (separated by blank line) -> averaged: (50.0 + 100.0) / 2 = 75.0
+        String twoProjects = project1 + "\n\n" + project2;
+        when(resumeParser.extractSections(anyString())).thenReturn(Map.of("PROJECTS", twoProjects));
+        ATSScoreEngine.ScoreResult rBoth = engine.score(TestData.GOOD_RESUME, TestData.JD_TWO_TERMS, false, false);
+        assertEquals(75.0, rBoth.projectScore(), 0.01,
+                "Two projects meeting 2/4 and 4/4 criteria must be averaged to 75.0");
+    }
+
+    @Test
+    void should_deductExactly8_whenGraphicsArePresent() {
+        ATSScoreEngine.ScoreResult withoutGraphics = engine.score(TestData.GOOD_RESUME, TestData.JD_TWO_TERMS, false, false);
+        ATSScoreEngine.ScoreResult withGraphics = engine.score(TestData.GOOD_RESUME, TestData.JD_TWO_TERMS, false, true);
+
+        assertEquals(100.0, withoutGraphics.atsScore(), 0.01);
+        assertEquals(92.0, withGraphics.atsScore(), 0.01);
+        assertEquals(8.0, withoutGraphics.atsScore() - withGraphics.atsScore(), 0.01,
+                "Graphics present must give exactly minus 8 deduction");
     }
 }

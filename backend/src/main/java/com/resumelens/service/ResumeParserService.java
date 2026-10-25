@@ -3,12 +3,16 @@ package com.resumelens.service;
 import com.resumelens.exception.ResumeParseException;
 import com.resumelens.exception.UnsupportedFileTypeException;
 import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -27,7 +31,8 @@ public class ResumeParserService {
     /** Extracts raw text from PDF or DOCX; throws typed exceptions for parse or type failures. */
     public String extractText(MultipartFile file) {
         String name = Objects.requireNonNull(file.getOriginalFilename(), "Filename must not be null");
-        String ext  = name.substring(name.lastIndexOf('.') + 1).toLowerCase();
+        int lastDot = name.lastIndexOf('.');
+        String ext  = lastDot >= 0 ? name.substring(lastDot + 1).toLowerCase(Locale.ROOT) : "";
         return switch (ext) {
             case "pdf"  -> extractPdf(file);
             case "docx" -> extractDocx(file);
@@ -35,9 +40,67 @@ public class ResumeParserService {
         };
     }
 
+    /**
+     * Detects embedded graphics or images in uploaded resumes:
+     * - For PDF: any page containing an image XObject
+     * - For DOCX: doc.getAllPictures() is not empty
+     */
+    public boolean hasGraphics(MultipartFile file) {
+        String name = Objects.requireNonNull(file.getOriginalFilename(), "Filename must not be null");
+        int lastDot = name.lastIndexOf('.');
+        String ext  = lastDot >= 0 ? name.substring(lastDot + 1).toLowerCase(Locale.ROOT) : "";
+        return switch (ext) {
+            case "pdf"  -> hasPdfGraphics(file);
+            case "docx" -> hasDocxGraphics(file);
+            default     -> false;
+        };
+    }
+
+    private boolean hasPdfGraphics(MultipartFile file) {
+        try {
+            byte[] bytes = file.getBytes();
+            if (!hasPdfSignature(bytes)) {
+                return false;
+            }
+            try (PDDocument doc = Loader.loadPDF(bytes)) {
+                for (PDPage page : doc.getPages()) {
+                    PDResources resources = page.getResources();
+                    if (resources != null) {
+                        for (COSName name : resources.getXObjectNames()) {
+                            if (resources.isImageXObject(name)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+        } catch (IOException | RuntimeException e) {
+            return false;
+        }
+    }
+
+    private boolean hasDocxGraphics(MultipartFile file) {
+        try {
+            byte[] bytes = file.getBytes();
+            if (!hasDocxSignature(bytes)) {
+                return false;
+            }
+            try (ByteArrayInputStream in = new ByteArrayInputStream(bytes);
+                 XWPFDocument doc = new XWPFDocument(in)) {
+                return !doc.getAllPictures().isEmpty();
+            }
+        } catch (IOException | RuntimeException e) {
+            return false;
+        }
+    }
+
     private String extractPdf(MultipartFile file) {
         try {
             byte[] bytes = file.getBytes();
+            if (!hasPdfSignature(bytes)) {
+                throw new UnsupportedFileTypeException("pdf");
+            }
             try (PDDocument doc = Loader.loadPDF(bytes)) {
                 String text = new PDFTextStripper().getText(doc).trim();
                 if (text.isBlank()) {
@@ -46,21 +109,44 @@ public class ResumeParserService {
                 }
                 return text;
             }
-        } catch (ResumeParseException e) {
+        } catch (UnsupportedFileTypeException | ResumeParseException e) {
             throw e;
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             throw new ResumeParseException("Failed to read PDF: " + e.getMessage(), e);
         }
     }
 
     private String extractDocx(MultipartFile file) {
-        try (XWPFDocument doc = new XWPFDocument(file.getInputStream())) {
-            StringBuilder sb = new StringBuilder();
-            doc.getParagraphs().forEach(p -> sb.append(p.getText()).append('\n'));
-            return sb.toString().trim();
-        } catch (IOException e) {
+        try {
+            byte[] bytes = file.getBytes();
+            if (!hasDocxSignature(bytes)) {
+                throw new UnsupportedFileTypeException("docx");
+            }
+            try (ByteArrayInputStream in = new ByteArrayInputStream(bytes);
+                 XWPFDocument doc = new XWPFDocument(in)) {
+                StringBuilder sb = new StringBuilder();
+                doc.getParagraphs().forEach(p -> sb.append(p.getText()).append('\n'));
+                return sb.toString().trim();
+            }
+        } catch (UnsupportedFileTypeException | ResumeParseException e) {
+            throw e;
+        } catch (IOException | RuntimeException e) {
             throw new ResumeParseException("Failed to read DOCX: " + e.getMessage(), e);
         }
+    }
+
+    private static boolean hasPdfSignature(byte[] bytes) {
+        if (bytes == null || bytes.length < 5) {
+            return false;
+        }
+        return bytes[0] == '%' && bytes[1] == 'P' && bytes[2] == 'D' && bytes[3] == 'F' && bytes[4] == '-';
+    }
+
+    private static boolean hasDocxSignature(byte[] bytes) {
+        if (bytes == null || bytes.length < 4) {
+            return false;
+        }
+        return bytes[0] == 'P' && bytes[1] == 'K' && bytes[2] == 0x03 && bytes[3] == 0x04;
     }
 
     /**
@@ -76,7 +162,7 @@ public class ResumeParserService {
         for (String line : lines) {
             if (SECTION_HEADER.matcher(line.trim()).matches()) {
                 sections.put(currentSection, body.toString().trim());
-                currentSection = line.trim().toUpperCase().replaceAll("[:\\s]+$", "");
+                currentSection = line.trim().toUpperCase(Locale.ROOT).replaceAll("[:\\s]+$", "");
                 body = new StringBuilder();
             } else {
                 body.append(line).append('\n');

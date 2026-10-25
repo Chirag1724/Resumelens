@@ -1,10 +1,11 @@
 package com.resumelens.dto.response;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public record HistoryItemResponse(
-        Long matchResultId,
-        Long resumeId,
+        UUID id,
+        UUID resumeId,
         String resumeFileName,
         String jobTitle,
         Double overallScore,

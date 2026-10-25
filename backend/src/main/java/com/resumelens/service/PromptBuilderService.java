@@ -12,6 +12,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import java.util.UUID;
+
 /**
  * Builds the copyable AI-improvement prompt.
  * The system never calls an AI API - per PROJECT_CONTEXT.md & Architectural Principles.
@@ -32,16 +34,17 @@ public class PromptBuilderService {
     /**
      * Assembles a complete, self-contained prompt the user can paste into an
      * external AI assistant. templateStyle controls the LaTeX template preference.
-     * @param matchResultId the persisted analysis result
+     * @param matchResultPublicId the persisted analysis result public UUID
      * @param templateStyle one of: "Awesome-CV", "Deedy Resume", "Simple Single-Column"
      * @return the assembled prompt string
      */
     @Transactional(readOnly = true)
-    public String buildFixPrompt(Long matchResultId, String templateStyle) {
-        MatchResult result = matchResultRepository.findById(matchResultId)
-            .orElseThrow(() -> new ResourceNotFoundException("MatchResult", matchResultId));
+    public String buildFixPrompt(UUID matchResultPublicId, String templateStyle) {
+        MatchResult result = matchResultRepository.findByPublicId(matchResultPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("MatchResult", matchResultPublicId));
 
-        List<SectionScore> sections = sectionScoreRepository.findByMatchResultId(matchResultId);
+        List<SectionScore> sections = sectionScoreRepository.findByMatchResultPublicId(matchResultPublicId);
+
         List<SectionScore> weakSections = sections.stream()
             .sorted(Comparator.comparingDouble(SectionScore::getScore))
             .limit(3)

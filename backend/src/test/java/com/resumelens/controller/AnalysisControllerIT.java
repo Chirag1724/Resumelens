@@ -14,16 +14,18 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * Integration tests for the full analysis pipeline:
- * upload → match → get result → fix-prompt → report
+ * upload -> match -> get result -> fix-prompt -> report
  *
  * All 6 section scores are verified to be in valid ranges [0, 100].
- * Fix-prompt and report endpoints are exercised for a real matchResultId.
+ * Fix-prompt and report endpoints are exercised for a real MatchResult UUID.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -37,8 +39,8 @@ class AnalysisControllerIT {
     ObjectMapper mapper;
 
     /** Shared across every test method via @BeforeEach. */
-    private Long resumeId;
-    private Long matchResultId;
+    private UUID resumeId;
+    private UUID matchResultId;
 
     private static final String SAMPLE_JD = "We need a java developer with spring boot docker kubernetes experience";
 
@@ -53,8 +55,9 @@ class AnalysisControllerIT {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        resumeId = mapper.readTree(uploadBody).path("data").path("resumeId").asLong();
-        assertTrue(resumeId > 0, "Resume upload must return a valid ID in @BeforeEach");
+        String resumeIdStr = mapper.readTree(uploadBody).path("data").path("resumeId").asText();
+        resumeId = UUID.fromString(resumeIdStr);
+        assertNotNull(resumeId, "Resume upload must return a valid UUID in @BeforeEach");
 
         // 2. Run analysis
         String matchBody = mockMvc.perform(post("/api/v1/analysis/match")
@@ -63,11 +66,12 @@ class AnalysisControllerIT {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        matchResultId = mapper.readTree(matchBody).path("data").path("matchResultId").asLong();
-        assertTrue(matchResultId > 0, "Analysis match must return a valid matchResultId in @BeforeEach");
+        String matchResultIdStr = mapper.readTree(matchBody).path("data").path("id").asText();
+        matchResultId = UUID.fromString(matchResultIdStr);
+        assertNotNull(matchResultId, "Analysis match must return a valid id UUID in @BeforeEach");
     }
 
-    // GET /api/v1/analysis/{id} — all 6 sections in range
+    // GET /api/v1/analysis/{id} - all 6 sections in range
 
     @Test
     void should_return200_withAll6SectionScoresInValidRange() throws Exception {
@@ -118,7 +122,7 @@ class AnalysisControllerIT {
         assertTrue(hasSkillsSection, "Must contain SKILLS_VALIDATION section");
     }
 
-    // GET /api/v1/analysis/{id}/fix-prompt — 200
+    // GET /api/v1/analysis/{id}/fix-prompt - 200
 
     @Test
     void should_return200_forFixPromptEndpoint_givenValidMatchResultId() throws Exception {
@@ -135,7 +139,7 @@ class AnalysisControllerIT {
                 "Fix prompt must contain LaTeX / resume content keywords");
     }
 
-    // GET /api/v1/analysis/{id}/report — 200 with PDF bytes
+    // GET /api/v1/analysis/{id}/report - 200 with PDF bytes
 
     @Test
     void should_return200WithPdfBytes_forReportEndpoint_givenValidMatchResultId() throws Exception {
@@ -145,22 +149,131 @@ class AnalysisControllerIT {
                 .andReturn().getResponse().getContentAsByteArray();
 
         assertTrue(pdf.length > 0, "PDF report must not be empty");
-        // PDF magic bytes: %PDF
+        // PDF magic bytes: %PDF-
         assertEquals('%', (char) pdf[0]);
         assertEquals('P', (char) pdf[1]);
         assertEquals('D', (char) pdf[2]);
         assertEquals('F', (char) pdf[3]);
+        assertEquals('-', (char) pdf[4]);
     }
 
-    // 404 for unknown IDs
+    // Numeric IDs return 400 on all analysis routes
 
     @Test
-    void should_return4xx_whenMatchResultIdDoesNotExist() throws Exception {
-        mockMvc.perform(get("/api/v1/analysis/{id}", 999_999L))
-                .andExpect(result -> {
-                    int status = result.getResponse().getStatus();
-                    assertTrue(status >= 400 && status < 500,
-                            "Non-existent matchResultId must return 4xx, got: " + status);
-                });
+    void should_return400_whenNumericIdProvidedOnAnalysisRoutes() throws Exception {
+        mockMvc.perform(get("/api/v1/analysis/12345"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());
+
+        mockMvc.perform(get("/api/v1/analysis/12345/report"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());
+
+        mockMvc.perform(get("/api/v1/analysis/12345/fix-prompt"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    // Random UUID returns 404
+
+    @Test
+    void should_return404_whenRandomUuidProvidedOnAnalysisRoutes() throws Exception {
+        UUID randomId = UUID.randomUUID();
+
+        mockMvc.perform(get("/api/v1/analysis/{id}", randomId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.message").value("The requested resource was not found."));
+
+        mockMvc.perform(get("/api/v1/analysis/{id}/report", randomId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.message").value("The requested resource was not found."));
+
+        mockMvc.perform(get("/api/v1/analysis/{id}/fix-prompt", randomId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.message").value("The requested resource was not found."));
+    }
+
+    // Match with random resumeId UUID returns 404
+
+    @Test
+    void should_return404_whenMatchWithRandomResumeId() throws Exception {
+        mockMvc.perform(post("/api/v1/analysis/match")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestData.matchJson(UUID.randomUUID(), SAMPLE_JD, "Software Engineer")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.message").value("The requested resource was not found."));
+    }
+
+    // Full guest flow works with UUIDs
+
+    @Test
+    void should_completeFullGuestFlowWithUuids() throws Exception {
+        // Step 1: Upload resume as guest (no auth header)
+        MockMultipartFile pdf = new MockMultipartFile(
+                "file", "guest_resume.pdf", "application/pdf",
+                ResumeControllerIT.buildMinimalPdf());
+
+        String uploadBody = mockMvc.perform(multipart("/api/v1/resumes/upload").file(pdf))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn().getResponse().getContentAsString();
+
+        String uploadedResumeId = mapper.readTree(uploadBody).path("data").path("resumeId").asText();
+        UUID guestResumeUuid = assertDoesNotThrow(() -> UUID.fromString(uploadedResumeId));
+
+        // Step 2: Match as guest
+        String matchBody = mockMvc.perform(post("/api/v1/analysis/match")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestData.matchJson(guestResumeUuid, SAMPLE_JD, "Guest Engineer")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn().getResponse().getContentAsString();
+
+        String matchIdStr = mapper.readTree(matchBody).path("data").path("id").asText();
+        UUID guestMatchUuid = assertDoesNotThrow(() -> UUID.fromString(matchIdStr));
+
+        // Step 3: Get analysis result as guest
+        mockMvc.perform(get("/api/v1/analysis/{id}", guestMatchUuid))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(guestMatchUuid.toString()));
+
+        // Step 4: Get PDF report as guest
+        mockMvc.perform(get("/api/v1/analysis/{id}/report", guestMatchUuid))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "application/pdf"));
+
+        // Step 5: Get fix prompt as guest
+        mockMvc.perform(get("/api/v1/analysis/{id}/fix-prompt", guestMatchUuid))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    // 404 body contains no class names
+
+    @Test
+    void should_containNoClassNames_in404ResponseBody() throws Exception {
+        String responseBody = mockMvc.perform(get("/api/v1/analysis/{id}", UUID.randomUUID()))
+                .andExpect(status().isNotFound())
+                .andReturn().getResponse().getContentAsString();
+
+        assertFalse(responseBody.contains("MatchResult"), "404 response must not contain MatchResult class name");
+        assertFalse(responseBody.contains("Resume"), "404 response must not contain Resume class name");
+        assertFalse(responseBody.contains("JobDescription"), "404 response must not contain JobDescription class name");
+        assertFalse(responseBody.contains("User"), "404 response must not contain User class name");
+        assertFalse(responseBody.contains("com.resumelens"), "404 response must not contain package name");
+        assertEquals("{\"success\":false,\"message\":\"The requested resource was not found.\",\"data\":null}", responseBody);
     }
 }
+

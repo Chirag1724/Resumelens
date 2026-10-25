@@ -15,9 +15,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
@@ -36,6 +37,8 @@ import static org.mockito.Mockito.when;
  */
 @ExtendWith(MockitoExtension.class)
 class PromptBuilderServiceTest {
+
+    private static final UUID TEST_UUID = UUID.randomUUID();
 
     @Mock
     private MatchResultRepository matchResultRepository;
@@ -78,9 +81,9 @@ class PromptBuilderServiceTest {
                 TestData.PROMPT_MISSING_KW // "[\"docker\"]"
         );
 
-        when(matchResultRepository.findById(anyLong()))
+        when(matchResultRepository.findByPublicId(any(UUID.class)))
                 .thenReturn(Optional.of(matchResult));
-        when(sectionScoreRepository.findByMatchResultId(anyLong()))
+        when(sectionScoreRepository.findByMatchResultPublicId(any(UUID.class)))
                 .thenReturn(List.of(sectionWithMissingKw));
     }
 
@@ -88,28 +91,28 @@ class PromptBuilderServiceTest {
 
     @Test
     void should_containResumeText_inGeneratedPrompt() {
-        String prompt = service.buildFixPrompt(1L, TestData.PROMPT_TEMPLATE);
+        String prompt = service.buildFixPrompt(TEST_UUID, TestData.PROMPT_TEMPLATE);
         assertTrue(prompt.contains(TestData.PROMPT_RESUME_TEXT),
                 "Prompt must embed the full resume text");
     }
 
     @Test
     void should_containJobDescription_inGeneratedPrompt() {
-        String prompt = service.buildFixPrompt(1L, TestData.PROMPT_TEMPLATE);
+        String prompt = service.buildFixPrompt(TEST_UUID, TestData.PROMPT_TEMPLATE);
         assertTrue(prompt.contains(TestData.PROMPT_JD_TEXT),
                 "Prompt must embed the full job description");
     }
 
     @Test
     void should_containJobTitle_inGeneratedPrompt() {
-        String prompt = service.buildFixPrompt(1L, TestData.PROMPT_TEMPLATE);
+        String prompt = service.buildFixPrompt(TEST_UUID, TestData.PROMPT_TEMPLATE);
         assertTrue(prompt.contains(TestData.PROMPT_JOB_TITLE),
                 "Prompt must embed the job title");
     }
 
     @Test
     void should_containMissingKeywords_inGeneratedPrompt() {
-        String prompt = service.buildFixPrompt(1L, TestData.PROMPT_TEMPLATE);
+        String prompt = service.buildFixPrompt(TEST_UUID, TestData.PROMPT_TEMPLATE);
         // PROMPT_MISSING_KW = "[\"docker\"]" — the actual JSON string stored in
         // sectionScore
         assertTrue(prompt.contains("docker"),
@@ -118,14 +121,14 @@ class PromptBuilderServiceTest {
 
     @Test
     void should_containTemplateStyle_inGeneratedPrompt() {
-        String prompt = service.buildFixPrompt(1L, TestData.PROMPT_TEMPLATE);
+        String prompt = service.buildFixPrompt(TEST_UUID, TestData.PROMPT_TEMPLATE);
         assertTrue(prompt.contains(TestData.PROMPT_TEMPLATE),
                 "Prompt must embed the requested template style");
     }
 
     @Test
     void should_containDefaultTemplateStyle_whenNullTemplateProvided() {
-        String prompt = service.buildFixPrompt(1L, null);
+        String prompt = service.buildFixPrompt(TEST_UUID, null);
         assertTrue(prompt.contains("Simple Single-Column"),
                 "Null template must fall back to 'Simple Single-Column'");
     }
@@ -134,7 +137,7 @@ class PromptBuilderServiceTest {
 
     @Test
     void should_containAllAntiFabricationRules_inGeneratedPrompt() {
-        String prompt = service.buildFixPrompt(1L, TestData.PROMPT_TEMPLATE);
+        String prompt = service.buildFixPrompt(TEST_UUID, TestData.PROMPT_TEMPLATE);
         assertAll(
                 "All 7 anti-fabrication rules must appear in the prompt",
                 () -> assertTrue(prompt.contains("Do NOT fabricate"),
@@ -157,14 +160,14 @@ class PromptBuilderServiceTest {
 
     @Test
     void should_containLatexOnlyOutputInstruction_inGeneratedPrompt() {
-        String prompt = service.buildFixPrompt(1L, TestData.PROMPT_TEMPLATE);
+        String prompt = service.buildFixPrompt(TEST_UUID, TestData.PROMPT_TEMPLATE);
         assertTrue(prompt.contains("Produce ONLY complete, compilable LaTeX code"),
                 "Prompt must contain the LaTeX-only output instruction");
     }
 
     @Test
     void should_endWithNoExplanationClause_inGeneratedPrompt() {
-        String prompt = service.buildFixPrompt(1L, TestData.PROMPT_TEMPLATE);
+        String prompt = service.buildFixPrompt(TEST_UUID, TestData.PROMPT_TEMPLATE);
         String expectedEnding = "Do not include any explanation, commentary, or markdown before or after the code.";
         assertTrue(prompt.contains(expectedEnding),
                 "Prompt must end with the no-explanation clause");
@@ -174,8 +177,9 @@ class PromptBuilderServiceTest {
 
     @Test
     void should_containWeakSectionName_inGeneratedPrompt() {
-        String prompt = service.buildFixPrompt(1L, TestData.PROMPT_TEMPLATE);
+        String prompt = service.buildFixPrompt(TEST_UUID, TestData.PROMPT_TEMPLATE);
         assertTrue(prompt.contains(SectionScore.SKILLS_VALIDATION),
                 "Prompt must list the weakest-scoring section by name");
     }
 }
+

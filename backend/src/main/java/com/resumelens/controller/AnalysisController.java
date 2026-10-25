@@ -12,6 +12,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/v1/analysis")
 public class AnalysisController {
@@ -21,8 +23,8 @@ public class AnalysisController {
     private final PromptBuilderService promptBuilderService;
 
     public AnalysisController(AnalysisService analysisService,
-                               ReportGeneratorService reportGeneratorService,
-                               PromptBuilderService promptBuilderService) {
+                              ReportGeneratorService reportGeneratorService,
+                              PromptBuilderService promptBuilderService) {
         this.analysisService = analysisService;
         this.reportGeneratorService = reportGeneratorService;
         this.promptBuilderService = promptBuilderService;
@@ -37,27 +39,27 @@ public class AnalysisController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    @GetMapping("/{matchResultId}")
+    @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<AnalysisResponse>> getResult(
-            @PathVariable Long matchResultId) {
-        return ResponseEntity.ok(ApiResponse.success(analysisService.getResult(matchResultId)));
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(analysisService.getResult(id)));
     }
 
-    @GetMapping("/{matchResultId}/report")
-    public ResponseEntity<byte[]> downloadReport(@PathVariable Long matchResultId) {
-        byte[] pdf = reportGeneratorService.generatePdfReport(matchResultId);
+    @GetMapping("/{id}/report")
+    public ResponseEntity<byte[]> downloadReport(@PathVariable UUID id) {
+        byte[] pdf = reportGeneratorService.generatePdfReport(id);
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION,
-                    "attachment; filename=\"ats-report-" + matchResultId + ".pdf\"")
+                    "attachment; filename=\"ats-report-" + id + ".pdf\"")
             .contentType(MediaType.APPLICATION_PDF)
             .body(pdf);
     }
 
-    @GetMapping("/{matchResultId}/fix-prompt")
+    @GetMapping("/{id}/fix-prompt")
     public ResponseEntity<ApiResponse<String>> getFixPrompt(
-            @PathVariable Long matchResultId,
+            @PathVariable UUID id,
             @RequestParam(value = "templateStyle", defaultValue = "Simple Single-Column") String templateStyle) {
-        String prompt = promptBuilderService.buildFixPrompt(matchResultId, templateStyle);
+        String prompt = promptBuilderService.buildFixPrompt(id, templateStyle);
         return ResponseEntity.ok(ApiResponse.success(prompt));
     }
 }

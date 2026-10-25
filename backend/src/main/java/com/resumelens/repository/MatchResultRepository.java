@@ -1,9 +1,16 @@
 package com.resumelens.repository;
 
 import com.resumelens.entity.MatchResult;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 public interface MatchResultRepository extends JpaRepository<MatchResult, Long> {
-    List<MatchResult> findByResumeUserIdOrderByAnalyzedAtDesc(Long userId);
+    Optional<MatchResult> findByPublicId(UUID publicId);
+
+    @EntityGraph(attributePaths = {"resume", "jobDescription"})
+    List<MatchResult> findByResumeUserIdOrderByAnalyzedAtDesc(Long userId, Pageable pageable);
 }

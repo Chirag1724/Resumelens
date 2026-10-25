@@ -2,6 +2,7 @@ package com.resumelens.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "match_results")
@@ -10,6 +11,9 @@ public class MatchResult {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false, unique = true, updatable = false)
+    private UUID publicId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "resume_id", nullable = false)
@@ -42,7 +46,14 @@ public class MatchResult {
     private LocalDateTime analyzedAt;
 
     @PrePersist
-    void prePersist() { this.analyzedAt = LocalDateTime.now(); }
+    void prePersist() {
+        if (this.publicId == null) {
+            this.publicId = UUID.randomUUID();
+        }
+        if (this.analyzedAt == null) {
+            this.analyzedAt = LocalDateTime.now();
+        }
+    }
 
     protected MatchResult() {}
 
@@ -64,6 +75,12 @@ public class MatchResult {
     public void setImprovementPrompt(String v) { this.improvementPrompt = v; }
 
     public Long getId() { return id; }
+    public UUID getPublicId() {
+        if (this.publicId == null) {
+            this.publicId = UUID.randomUUID();
+        }
+        return publicId;
+    }
     public Resume getResume() { return resume; }
     public JobDescription getJobDescription() { return jobDescription; }
     public Double getOverallScore() { return overallScore; }

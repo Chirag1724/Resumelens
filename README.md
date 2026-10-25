@@ -126,49 +126,38 @@ docs/       Architecture documentation, scoring rules, conventions, and decision
 
 4. Run the backend.
 
+   **Linux and macOS:**
    ```bash
    cd backend
    ./mvnw spring-boot:run
+   ```
+
+   **Windows:**
+   ```powershell
+   cd backend
+   .\mvnw.cmd spring-boot:run
    ```
 
    The API will be available at `http://localhost:8080`. The health endpoint at `/api/v1/health` returns `{ "status": "UP" }` when the server is ready.
 
 ### Frontend Setup
 
-1. Navigate to the frontend directory.
-
-   ```bash
-   cd frontend
-   ```
-
-2. Install dependencies.
-
-   ```bash
-   npm install
-   ```
-
-3. Copy the environment template and set the API base URL.
-
-   ```bash
-   cp .env.example .env.local
-   # Edit .env.local and set VITE_API_BASE_URL=http://localhost:8080
-   ```
-
-4. Start the development server.
-
-   ```bash
-   npm run dev
-   ```
-
-   The frontend will be available at `http://localhost:5173`.
+Coming soon.
 
 ---
 
 ## Running Tests
 
+**Linux and macOS:**
 ```bash
 cd backend
-mvn test
+./mvnw test
+```
+
+**Windows:**
+```powershell
+cd backend
+.\mvnw.cmd test
 ```
 
 ---

@@ -74,4 +74,17 @@ class SimilarityCalculatorTest {
     void cosineEmptyVectorReturnsZero() {
         assertEquals(0.0, calc.cosineSimilarity(java.util.Map.of(), java.util.Map.of("java", 1.0)));
     }
+
+    @Test
+    void isFuzzyMatchReturnsTrueAtThresholdAndFalseAtThresholdPlusOne() {
+        // Levenshtein distance between "java" and "javaaa" is 2
+        assertEquals(2, calc.levenshteinDistance("java", "javaaa"));
+        assertTrue(calc.isFuzzyMatch("java", "javaaa", 2),
+                "isFuzzyMatch must return true when distance equals threshold (2 == 2)");
+
+        // Levenshtein distance between "java" and "javaaaa" is 3 (threshold + 1)
+        assertEquals(3, calc.levenshteinDistance("java", "javaaaa"));
+        assertFalse(calc.isFuzzyMatch("java", "javaaaa", 2),
+                "isFuzzyMatch must return false when distance equals threshold + 1 (3 > 2)");
+    }
 }

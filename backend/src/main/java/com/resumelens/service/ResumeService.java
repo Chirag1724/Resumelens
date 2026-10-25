@@ -7,6 +7,8 @@ import com.resumelens.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.UUID;
+
 /**
  * Owns the resume upload lifecycle: text extraction, optional user linking, and persistence.
  * Extracted from ResumeController per layered architecture (controllers must not call repositories directly).
@@ -28,19 +30,21 @@ public class ResumeService {
 
     /**
      * Extracts text from the uploaded file, optionally links it to an authenticated user,
-     * persists the Resume entity, and returns its generated ID.
+     * persists the Resume entity, and returns its public UUID.
      *
      * @param file             The uploaded resume file (PDF or DOCX).
      * @param targetRole       Optional target role hint; may be null.
      * @param experienceYears  Optional years of experience; may be null.
      * @param email            Authenticated user's email, or null for guest uploads.
-     * @return The ID of the persisted Resume.
+     * @return The public UUID of the persisted Resume.
      */
-    public Long save(MultipartFile file, String targetRole, Integer experienceYears, String email) {
+    public UUID save(MultipartFile file, String targetRole, Integer experienceYears, String email) {
         String rawText = resumeParser.extractText(file);
+        boolean hasGraphics = resumeParser.hasGraphics(file);
         User user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
         Resume resume = resumeRepository.save(
-            new Resume(user, file.getOriginalFilename(), rawText, targetRole, experienceYears));
-        return resume.getId();
+            new Resume(user, file.getOriginalFilename(), rawText, targetRole, experienceYears, hasGraphics));
+        return resume.getPublicId();
     }
 }
+

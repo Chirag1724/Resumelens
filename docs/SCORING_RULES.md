@@ -46,8 +46,8 @@ Apply the following **deductions** (non-cumulative caps noted where applicable):
 | Resume uses graphics, images, or non-standard fonts (detected via heuristic) | –8 | |
 | Keyword density below 30% of JD keywords present in resume | –15 | Threshold: fewer than 30% of extracted JD keywords found (exact or fuzzy via Levenshtein ≤ 2 edits) |
 | Keyword density 30%–50% | –8 | Partial penalty; only one of the two keyword density rules applies |
-| No measurable achievements found (no digits/percentages in bullet points) | –5 | |
-| File format not plain-text-parseable (binary/image PDF with no text layer) | –20 | Applied at parse time; short-circuits scoring |
+| No measurable achievements found (checks the whole resume text for any digit or percentage) | -5 | |
+| File with no extractable text (for example a scanned image PDF) | Rejected at upload with HTTP 422 and a clear message; no score is produced | |
 
 **Floor:** ATS score cannot go below 0.
 
@@ -77,7 +77,7 @@ skillsScore = min(100, skillsScore + cosineBonus)
 
 Count bullet points (lines starting with `–`, `-`, `•`, or `*`) that contain at least one:
 - Numeric value (e.g., "increased by 40%", "managed 12 engineers")
-- Strong action verb from the predefined verb list (see `util/ActionVerbList.java`)
+- Strong action verb from the predefined verb list in ATSScoreEngine
 
 ```
 impactPercentage = (impactBullets / totalBullets) × 100
@@ -153,15 +153,15 @@ If no Projects section detected → projectScore = 50  (neutral, not penalised)
 
 ## Status Label Thresholds
 
-After computing `overallScore`, assign one of the following labels:
+A single shared method (`SectionScore.deriveStatus`) maps numerical scores across the canonical 85, 70, 55, 40 boundary thresholds:
 
-| overallScore Range | Status Label |
-|--------------------|--------------|
-| ≥ 85 | **Excellent Match** |
-| 70–84 | **Strong Match** |
-| 55–69 | **Moderate Match** |
-| 40–54 | **Weak Match** |
-| < 40 | **Poor Match** |
+| Score Range | Section Status (`SectionScore.status`) | Overall Status Label (`statusLabel`) |
+|-------------|----------------------------------------|--------------------------------------|
+| >= 85 | **EXCELLENT** | **Excellent Match** |
+| 70 - 84 | **STRONG** | **Strong Match** |
+| 55 - 69 | **MODERATE** | **Moderate Match** |
+| 40 - 54 | **WEAK** | **Weak Match** |
+| < 40 | **POOR** | **Poor Match** |
 
 ---
 
@@ -173,4 +173,4 @@ After scoring, the system generates a structured copyable prompt. The prompt mus
 3. The sections with the lowest scores and their feedback strings.
 4. A fixed instruction block asking the external AI to rewrite or improve the corresponding resume sections.
 
-The system **does not call any external API** to generate this prompt. It is built by string assembly in `PromptGeneratorService`.
+The system **does not call any external API** to generate this prompt. It is built by string assembly in `PromptBuilderService`.

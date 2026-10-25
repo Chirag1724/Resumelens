@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -49,9 +50,9 @@ public class AnalysisService {
     }
 
     @Transactional
-    public AnalysisResponse runAnalysis(Long resumeId, Long jobDescriptionId,
+    public AnalysisResponse runAnalysis(UUID resumeId, Long jobDescriptionId,
                                         String rawJdText, String jobTitle) {
-        Resume resume = resumeRepository.findById(resumeId)
+        Resume resume = resumeRepository.findByPublicId(resumeId)
             .orElseThrow(() -> new ResourceNotFoundException("Resume", resumeId));
 
         // Resolve the JD: prefer persisted entity, fall back to raw text
@@ -70,8 +71,7 @@ public class AnalysisService {
         String jdText     = jd.getDescription();
 
         boolean hasFormattingRisk = resumeParser.detectFormattingRisks(resumeText);
-        // Graphics detection is file-level; at analysis time we treat as false if not flagged at upload
-        boolean hasGraphicsRisk = false;
+        boolean hasGraphicsRisk = resume.hasGraphicsRisk();
 
         ATSScoreEngine.ScoreResult scores = scoreEngine.score(
             resumeText, jdText, hasFormattingRisk, hasGraphicsRisk);
@@ -110,21 +110,20 @@ public class AnalysisService {
             scores.missingKeywords(), weakVerbs, unquantified, scores.overallScore());
 
         // Build and persist improvement prompt
-        final Long savedMatchResultId = matchResult.getId();
-        String prompt = promptBuilder.buildFixPrompt(savedMatchResultId, "Simple Single-Column");
+        String prompt = promptBuilder.buildFixPrompt(matchResult.getPublicId(), "Simple Single-Column");
         matchResult.setImprovementPrompt(prompt);
         matchResultRepository.save(matchResult);
 
         // Map section scores to response DTOs
         List<SectionScoreResponse> sectionResponses = sectionScoreRepository
-            .findByMatchResultId(savedMatchResultId).stream()
+            .findByMatchResultId(matchResult.getId()).stream()
             .map(s -> new SectionScoreResponse(
                 s.getSectionName(), s.getScore(), s.getStatus(),
                 s.getFeedback(), s.getMatchedKeywords(), s.getMissingKeywords()))
             .collect(Collectors.toList());
 
         return new AnalysisResponse(
-            savedMatchResultId,
+            matchResult.getPublicId(),
             scores.overallScore(), scores.statusLabel(),
             scores.atsScore(), scores.skillsScore(),
             scores.impactScore(), scores.projectScore(),
@@ -133,10 +132,10 @@ public class AnalysisService {
             sectionResponses, suggestions, prompt);
     }
 
-    public AnalysisResponse getResult(Long matchResultId) {
-        MatchResult mr = matchResultRepository.findById(matchResultId)
-            .orElseThrow(() -> new ResourceNotFoundException("MatchResult", matchResultId));
-        List<SectionScoreResponse> sections = sectionScoreRepository.findByMatchResultId(matchResultId)
+    public AnalysisResponse getResult(UUID matchResultPublicId) {
+        MatchResult mr = matchResultRepository.findByPublicId(matchResultPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("MatchResult", matchResultPublicId));
+        List<SectionScoreResponse> sections = sectionScoreRepository.findByMatchResultId(mr.getId())
             .stream()
             .map(s -> new SectionScoreResponse(
                 s.getSectionName(), s.getScore(), s.getStatus(),
@@ -144,13 +143,14 @@ public class AnalysisService {
             .collect(Collectors.toList());
 
         return new AnalysisResponse(
-            mr.getId(), mr.getOverallScore(), mr.getStatusLabel(),
+            mr.getPublicId(), mr.getOverallScore(), mr.getStatusLabel(),
             mr.getAtsScore(), mr.getSkillsScore(),
             mr.getImpactScore(), mr.getProjectScore(),
             mr.getWritingScore(), mr.getProfessionalismScore(),
             mr.getKeywordMatchPercent(), sections, List.of(),
             mr.getImprovementPrompt());
     }
+
 
     // Helpers
     private void persistSectionScore(MatchResult mr, String name, double score,

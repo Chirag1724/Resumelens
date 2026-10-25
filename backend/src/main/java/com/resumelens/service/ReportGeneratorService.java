@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
 
+import java.util.UUID;
+
 @Service
 public class ReportGeneratorService {
 
@@ -33,12 +35,13 @@ public class ReportGeneratorService {
         this.sectionScoreRepository = sectionScoreRepository;
     }
 
-    /** Generates a PDF report for a given match result and returns the bytes. */
+    /** Generates a PDF report for a given match result public UUID and returns the bytes. */
     @Transactional(readOnly = true)
-    public byte[] generatePdfReport(Long matchResultId) {
-        MatchResult result = matchResultRepository.findById(matchResultId)
-            .orElseThrow(() -> new ResourceNotFoundException("MatchResult", matchResultId));
-        List<SectionScore> sections = sectionScoreRepository.findByMatchResultId(matchResultId);
+    public byte[] generatePdfReport(UUID matchResultPublicId) {
+        MatchResult result = matchResultRepository.findByPublicId(matchResultPublicId)
+            .orElseThrow(() -> new ResourceNotFoundException("MatchResult", matchResultPublicId));
+        List<SectionScore> sections = sectionScoreRepository.findByMatchResultPublicId(matchResultPublicId);
+
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (PdfDocument pdf = new PdfDocument(new PdfWriter(baos));
@@ -52,7 +55,7 @@ public class ReportGeneratorService {
             doc.add(new Paragraph(" "));
 
             // Overall score
-            doc.add(new Paragraph("Overall Score: " + result.getOverallScore() + " / 100  —  " + result.getStatusLabel())
+            doc.add(new Paragraph("Overall Score: " + result.getOverallScore() + " / 100 - " + result.getStatusLabel())
                 .setBold().setFontSize(14).setFontColor(scoreColor(result.getOverallScore())));
             doc.add(new Paragraph(" "));
 
@@ -102,8 +105,10 @@ public class ReportGeneratorService {
     }
 
     private com.itextpdf.kernel.colors.Color scoreColor(double score) {
-        if (score >= 70) return ColorConstants.DARK_GRAY;
-        if (score >= 40) return ColorConstants.ORANGE;
-        return ColorConstants.RED;
+        return switch (SectionScore.deriveStatus(score)) {
+            case SectionScore.EXCELLENT, SectionScore.STRONG -> ColorConstants.DARK_GRAY;
+            case SectionScore.MODERATE, SectionScore.WEAK   -> ColorConstants.ORANGE;
+            default                                          -> ColorConstants.RED;
+        };
     }
 }

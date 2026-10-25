@@ -4,6 +4,7 @@ import com.resumelens.dto.response.HistoryItemResponse;
 import com.resumelens.exception.ResourceNotFoundException;
 import com.resumelens.repository.MatchResultRepository;
 import com.resumelens.repository.UserRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,11 +28,11 @@ public class HistoryService {
         var user = userRepository.findByEmail(email)
             .orElseThrow(() -> new ResourceNotFoundException("User", email));
 
-        return matchResultRepository.findByResumeUserIdOrderByAnalyzedAtDesc(user.getId())
+        return matchResultRepository.findByResumeUserIdOrderByAnalyzedAtDesc(user.getId(), PageRequest.of(0, 50))
             .stream()
             .map(mr -> new HistoryItemResponse(
-                mr.getId(),
-                mr.getResume().getId(),
+                mr.getPublicId(),
+                mr.getResume().getPublicId(),
                 mr.getResume().getFileName(),
                 mr.getJobDescription().getTitle(),
                 mr.getOverallScore(),

@@ -3,6 +3,13 @@ package com.resumelens.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resumelens.TestData;
+import com.resumelens.entity.JobDescription;
+import com.resumelens.entity.MatchResult;
+import com.resumelens.entity.Resume;
+import com.resumelens.repository.JobDescriptionRepository;
+import com.resumelens.repository.MatchResultRepository;
+import com.resumelens.repository.ResumeRepository;
+import com.resumelens.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +21,8 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -22,11 +31,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Integration tests for GET /api/v1/history.
  *
  * Verifies:
- * - A valid token returns only that user's analyses, ordered by date
- * descending.
- * - A request without a token returns 401 or 403 (history is
- * authentication-required
- * per SecurityConfig: .requestMatchers("/api/v1/history/**").authenticated()).
+ * - A valid token returns only that user's analyses, ordered by date descending.
+ * - A request without a token returns exactly 401 with the standard ApiResponse JSON body.
  * - Two users cannot see each other's history.
  */
 @SpringBootTest
@@ -39,6 +45,14 @@ class HistoryControllerIT {
     MockMvc mockMvc;
     @Autowired
     ObjectMapper mapper;
+    @Autowired
+    MatchResultRepository matchResultRepository;
+    @Autowired
+    ResumeRepository resumeRepository;
+    @Autowired
+    JobDescriptionRepository jobDescriptionRepository;
+    @Autowired
+    UserRepository userRepository;
 
     private static final String JD_TEXT = "java spring boot docker developer role";
 
@@ -51,16 +65,16 @@ class HistoryControllerIT {
         tokenB = registerAndLogin(TestData.USER2_EMAIL, TestData.USER2_PASSWORD, TestData.USER2_NAME);
     }
 
-    // No token → 401
+    // No token -> 401 with standard JSON body
 
     @Test
-    void should_return401_whenRequestHasNoAuthorizationHeader() throws Exception {
+    void should_return401WithJsonBody_whenRequestHasNoAuthorizationHeader() throws Exception {
         mockMvc.perform(get("/api/v1/history"))
-                .andExpect(result -> {
-                    int status = result.getResponse().getStatus();
-                    assertTrue(status == 401 || status == 403,
-                            "History without token must return 401 or 403, got: " + status);
-                });
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.message").value("Authentication required"))
+                .andExpect(jsonPath("$.data").doesNotExist());
     }
 
     // Authenticated user gets only their own history
@@ -82,7 +96,7 @@ class HistoryControllerIT {
     @Test
     void should_returnOnlyOwnAnalyses_whenAuthenticatedUserHasCompletedAnalysis() throws Exception {
         // Upload + analyse for user A
-        Long resumeIdA = uploadPdfAs(tokenA);
+        UUID resumeIdA = uploadPdfAs(tokenA);
         runAnalysis(resumeIdA, JD_TEXT, "Software Engineer");
 
         // User A's history should have 1 item
@@ -109,7 +123,7 @@ class HistoryControllerIT {
     @Test
     void should_returnHistoryOrderedByDateDescending_whenMultipleAnalysesExist() throws Exception {
         // Run two analyses for user A
-        Long resumeId = uploadPdfAs(tokenA);
+        UUID resumeId = uploadPdfAs(tokenA);
         runAnalysis(resumeId, JD_TEXT + " react", "Frontend Developer");
         runAnalysis(resumeId, JD_TEXT + " kubernetes", "DevOps Engineer");
 
@@ -121,14 +135,35 @@ class HistoryControllerIT {
         JsonNode items = mapper.readTree(body).path("data");
         assertEquals(2, items.size(), "User A must see 2 analyses");
 
-        // Items should be ordered by analyzedAt descending — most recent first
-        // We can only assert both items are present and have distinct IDs
-        long id0 = items.get(0).path("matchResultId").asLong();
-        long id1 = items.get(1).path("matchResultId").asLong();
-        assertTrue(id0 > 0 && id1 > 0, "Both history items must have positive IDs");
-        // Most recent analysis has the higher ID (IDENTITY strategy, sequential)
-        assertTrue(id0 > id1,
-                "Most recent analysis (higher ID) must appear first (ordered by date desc)");
+        String id0 = items.get(0).path("id").asText();
+        String id1 = items.get(1).path("id").asText();
+        assertNotNull(UUID.fromString(id0), "Item 0 must have a valid UUID id");
+        assertNotNull(UUID.fromString(id1), "Item 1 must have a valid UUID id");
+        assertNotEquals(id0, id1, "Both history items must have distinct UUIDs");
+
+        String resId0 = items.get(0).path("resumeId").asText();
+        assertEquals(resumeId.toString(), resId0, "resumeId in history must match the uploaded resume publicId");
+    }
+
+    @Test
+    void should_returnAtMost50Results_whenUserHasMoreThan50Analyses() throws Exception {
+        var user = userRepository.findByEmail(TestData.USER_EMAIL).orElseThrow();
+        var resume = resumeRepository.save(new Resume(user, "test.pdf", "sample resume text", "Dev", 3));
+        var jd = jobDescriptionRepository.save(new JobDescription("Dev", JD_TEXT, "skills"));
+        for (int i = 0; i < 55; i++) {
+            MatchResult mr = new MatchResult(resume, jd);
+            mr.setOverallScore(75.0);
+            mr.setStatusLabel("Strong Match");
+            matchResultRepository.save(mr);
+        }
+
+        String body = mockMvc.perform(get("/api/v1/history")
+                .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode items = mapper.readTree(body).path("data");
+        assertEquals(50, items.size(), "History must cap returned results to latest 50");
     }
 
     // Helpers
@@ -150,7 +185,7 @@ class HistoryControllerIT {
         return token;
     }
 
-    private Long uploadPdfAs(String token) throws Exception {
+    private UUID uploadPdfAs(String token) throws Exception {
         MockMultipartFile pdf = new MockMultipartFile(
                 "file", "resume.pdf", "application/pdf",
                 ResumeControllerIT.buildMinimalPdf());
@@ -161,13 +196,15 @@ class HistoryControllerIT {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        return mapper.readTree(body).path("data").path("resumeId").asLong();
+        String idStr = mapper.readTree(body).path("data").path("resumeId").asText();
+        return UUID.fromString(idStr);
     }
 
-    private void runAnalysis(Long resumeId, String rawJd, String jobTitle) throws Exception {
+    private void runAnalysis(UUID resumeId, String rawJd, String jobTitle) throws Exception {
         mockMvc.perform(post("/api/v1/analysis/match")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(TestData.matchJson(resumeId, rawJd, jobTitle)))
                 .andExpect(status().isOk());
     }
 }
+

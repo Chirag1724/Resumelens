@@ -17,6 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.ByteArrayOutputStream;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -24,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Integration tests for POST /api/v1/resumes/upload.
- * PDFs are generated in-memory — no binary fixtures committed.
+ * PDFs are generated in-memory (no binary fixtures committed).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -51,8 +52,11 @@ class ResumeControllerIT {
                 .getResponse().getContentAsString();
 
         JsonNode data = mapper.readTree(body).path("data");
-        assertTrue(data.path("resumeId").asLong() > 0,
-                "Uploaded resume must receive a positive database-assigned ID");
+        String resumeIdStr = data.path("resumeId").asText();
+        assertNotNull(resumeIdStr);
+        UUID parsedUuid = assertDoesNotThrow(() -> UUID.fromString(resumeIdStr),
+                "Uploaded resume must receive a valid UUID publicId");
+        assertNotNull(parsedUuid);
     }
 
     // Unsupported file type
@@ -63,7 +67,84 @@ class ResumeControllerIT {
                 "file", "resume.txt", "text/plain", "John Doe resume".getBytes());
 
         mockMvc.perform(multipart("/api/v1/resumes/upload").file(txt))
-                .andExpect(status().isUnsupportedMediaType());
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    // Wrong magic bytes
+
+    @Test
+    void should_return415_whenPdfHasWrongMagicBytes() throws Exception {
+        MockMultipartFile badPdf = new MockMultipartFile(
+                "file", "resume.pdf", "application/pdf", "Not a valid PDF content".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/resumes/upload").file(badPdf))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    void should_return415_whenDocxHasWrongMagicBytes() throws Exception {
+        MockMultipartFile badDocx = new MockMultipartFile(
+                "file", "resume.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "Not a valid DOCX zip stream".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/resumes/upload").file(badDocx))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    // File over 10MB
+
+    @Test
+    void should_return413_whenFileExceeds10MB() throws Exception {
+        byte[] oversizedBytes = new byte[10 * 1024 * 1024 + 1024]; // 10MB + 1KB
+        MockMultipartFile hugeFile = new MockMultipartFile(
+                "file", "large.pdf", "application/pdf", oversizedBytes);
+
+        mockMvc.perform(multipart("/api/v1/resumes/upload").file(hugeFile))
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    // Corrupt DOCX
+
+    @Test
+    void should_return422_whenDocxIsCorrupt() throws Exception {
+        // Starts with valid PK 0x03 0x04 magic bytes, but remainder is garbage
+        byte[] corruptDocxBytes = new byte[] { 'P', 'K', 0x03, 0x04, 0x00, 0x00, 0x7f, 0x7f, 0x12, 0x34 };
+        MockMultipartFile corruptDocx = new MockMultipartFile(
+                "file", "corrupt.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                corruptDocxBytes);
+
+        mockMvc.perform(multipart("/api/v1/resumes/upload").file(corruptDocx))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    // No extractable text
+
+    @Test
+    void should_return422_whenUploadHasNoExtractableText() throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (PDDocument doc = new PDDocument()) {
+            doc.addPage(new PDPage());
+            doc.save(baos);
+        }
+        MockMultipartFile scannedPdf = new MockMultipartFile(
+                "file", "scanned.pdf", "application/pdf", baos.toByteArray());
+
+        mockMvc.perform(multipart("/api/v1/resumes/upload").file(scannedPdf))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());
     }
 
     // Empty file
@@ -74,7 +155,9 @@ class ResumeControllerIT {
                 "file", "resume.pdf", "application/pdf", new byte[0]);
 
         mockMvc.perform(multipart("/api/v1/resumes/upload").file(empty))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());
     }
 
     // Helper
@@ -107,3 +190,4 @@ class ResumeControllerIT {
         return baos.toByteArray();
     }
 }
+

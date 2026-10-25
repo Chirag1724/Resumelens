@@ -1,10 +1,14 @@
 package com.resumelens.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.resumelens.dto.response.ApiResponse;
 import com.resumelens.entity.User;
 import com.resumelens.repository.UserRepository;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -24,10 +28,14 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter, UserRepository userRepository) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter,
+                          UserRepository userRepository,
+                          ObjectMapper objectMapper) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userRepository = userRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Bean
@@ -35,6 +43,22 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.setCharacterEncoding("UTF-8");
+                    ApiResponse<Void> apiResponse = ApiResponse.failure("Authentication required");
+                    response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.setCharacterEncoding("UTF-8");
+                    ApiResponse<Void> apiResponse = ApiResponse.failure("Access denied");
+                    response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
+                })
+            )
             .authorizeHttpRequests(auth -> auth
                 // Public: auth
                 .requestMatchers("/api/v1/auth/**").permitAll()
@@ -53,6 +77,7 @@ public class SecurityConfig {
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
+
 
     @Bean
     public UserDetailsService userDetailsService() {

@@ -104,7 +104,7 @@ public class TfIdfCalculator {
     }
 
     public static String[] tokenize(String text) {
-        return text.toLowerCase()
+        return text.toLowerCase(Locale.ROOT)
                    .replaceAll("[^a-z0-9\\s]", " ")
                    .trim()
                    .split("\\s+");

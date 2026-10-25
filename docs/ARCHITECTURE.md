@@ -37,7 +37,7 @@ These are the only third-party libraries authorised for the roles listed below. 
 |------|---------|----------------|-------|
 | PDF parsing | Apache PDFBox | 3.x | Extracts plain text from text-layer PDFs; used in `ResumeParserService` |
 | DOCX parsing | Apache POI | 5.x | Extracts plain text from `.docx` files; used in `ResumeParserService` |
-| PDF report generation | iText (Community) | 8.x | Generates downloadable PDF analysis reports; used in a dedicated `ReportService` |
+| PDF report generation | iText (Community) | 8.x | Generates downloadable PDF analysis reports; used in ReportGeneratorService |
 
 All three are Apache-licensed or AGPL (iText Community) with no paid-API requirement, consistent with the no-paid-dependency principle in PROJECT_CONTEXT.md.
 
@@ -75,38 +75,19 @@ backend/
 └── src/main/java/com/resumelens/
     ├── ResumelensApplication.java          # Spring Boot entry point
     │
-    ├── controller/                         # HTTP layer only — no business logic
+    ├── algorithm/                          # Self-implemented NLP algorithms
+    │   ├── SimilarityCalculator.java       # Cosine similarity and Levenshtein fuzzy match
+    │   └── TfIdfCalculator.java            # TF-IDF term weighting
+    │
+    ├── config/                             # Spring configuration classes
+    │   └── CorsConfig.java
+    │
+    ├── controller/                         # HTTP layer only - no business logic
     │   ├── AnalysisController.java
     │   ├── AuthController.java
+    │   ├── HealthController.java
     │   ├── HistoryController.java
-    │   └── HealthController.java
-    │
-    ├── service/                            # All business logic lives here
-    │   ├── AnalysisService.java
-    │   ├── ScoringService.java
-    │   ├── ResumeParserService.java
-    │   ├── PromptGeneratorService.java
-    │   ├── UserService.java
-    │   └── HistoryService.java
-    │
-    ├── algorithm/                          # Self-implemented NLP algorithms
-    │   ├── TfIdfCalculator.java
-    │   ├── CosineSimilarityCalculator.java
-    │   └── LevenshteinDistance.java
-    │
-    ├── repository/                         # Spring Data JPA interfaces
-    │   ├── UserRepository.java
-    │   ├── ResumeRepository.java
-    │   ├── JobDescriptionRepository.java
-    │   ├── MatchResultRepository.java
-    │   └── SectionScoreRepository.java
-    │
-    ├── entity/                             # JPA entities (never exposed via API)
-    │   ├── User.java
-    │   ├── Resume.java
-    │   ├── JobDescription.java
-    │   ├── MatchResult.java
-    │   └── SectionScore.java
+    │   └── ResumeController.java
     │
     ├── dto/                                # API request/response objects
     │   ├── request/
@@ -114,23 +95,48 @@ backend/
     │   │   └── AuthRequest.java
     │   └── response/
     │       ├── AnalysisResponse.java
-    │       ├── SectionScoreResponse.java
+    │       ├── ApiResponse.java            # Generic wrapper: {success, data, message}
+    │       ├── AuthResponse.java
     │       ├── HistoryItemResponse.java
-    │       └── ApiResponse.java            # Generic wrapper: {success, data, message}
+    │       ├── SectionScoreResponse.java
+    │       └── SuggestionResponse.java
+    │
+    ├── entity/                             # JPA entities (never exposed via API)
+    │   ├── JobDescription.java
+    │   ├── MatchResult.java
+    │   ├── Resume.java
+    │   ├── SectionScore.java
+    │   └── User.java
     │
     ├── exception/                          # Exception types + global handler
-    │   ├── ResourceNotFoundException.java
+    │   ├── GlobalExceptionHandler.java     # @RestControllerAdvice
     │   ├── InvalidInputException.java
-    │   └── GlobalExceptionHandler.java     # @RestControllerAdvice
+    │   ├── ResourceNotFoundException.java
+    │   ├── ResumeParseException.java
+    │   └── UnsupportedFileTypeException.java
     │
-    ├── config/                             # Spring configuration classes
-    │   ├── SecurityConfig.java
-    │   ├── CorsConfig.java
-    │   └── JwtConfig.java
+    ├── repository/                         # Spring Data JPA interfaces
+    │   ├── JobDescriptionRepository.java
+    │   ├── MatchResultRepository.java
+    │   ├── ResumeRepository.java
+    │   ├── SectionScoreRepository.java
+    │   └── UserRepository.java
     │
-    └── util/                               # Pure utility helpers (text normalisation, etc.)
-        ├── TextNormalizer.java
-        └── JwtUtil.java
+    ├── security/                           # Spring Security and JWT authentication
+    │   ├── JwtAuthFilter.java
+    │   ├── JwtTokenProvider.java
+    │   └── SecurityConfig.java
+    │
+    └── service/                            # All business logic lives here
+        ├── AnalysisService.java
+        ├── ATSScoreEngine.java
+        ├── HistoryService.java
+        ├── PromptBuilderService.java
+        ├── ReportGeneratorService.java
+        ├── ResumeParserService.java
+        ├── ResumeService.java
+        ├── SuggestionEngine.java
+        └── UserService.java
 ```
 
 ---

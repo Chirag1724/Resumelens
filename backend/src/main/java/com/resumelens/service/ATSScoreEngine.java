@@ -2,6 +2,7 @@ package com.resumelens.service;
 
 import com.resumelens.algorithm.SimilarityCalculator;
 import com.resumelens.algorithm.TfIdfCalculator;
+import com.resumelens.entity.SectionScore;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -134,7 +135,7 @@ public class ATSScoreEngine {
         double score = 100.0;
 
         // Missing standard section headings (–8 per, max –24)
-        String lower = resumeText.toLowerCase();
+        String lower = resumeText.toLowerCase(Locale.ROOT);
         long missingSections = REQUIRED_SECTIONS.stream()
             .filter(s -> !lower.contains(s))
             .count();
@@ -232,7 +233,7 @@ public class ATSScoreEngine {
 
     private double projectSubScore(String block) {
         int met = 0;
-        String lower = block.toLowerCase();
+        String lower = block.toLowerCase(Locale.ROOT);
 
         // Has a title: first line is non-empty and short enough to be a heading
         String[] lines = block.trim().split("\n");
@@ -268,7 +269,7 @@ public class ATSScoreEngine {
         if (FIRST_PERSON.matcher(resumeText).find()) score -= 15;
 
         // Filler words (–3 per occurrence, max –15)
-        String lower = resumeText.toLowerCase();
+        String lower = resumeText.toLowerCase(Locale.ROOT);
         long fillerCount = FILLER_PHRASES.stream()
             .mapToLong(f -> countOccurrences(lower, f))
             .sum();
@@ -330,17 +331,19 @@ public class ATSScoreEngine {
 
     // Status label (SCORING_RULES.md & Status Label Thresholds)
     public static String statusLabel(double overallScore) {
-        if (overallScore >= 85) return "Excellent Match";
-        if (overallScore >= 70) return "Strong Match";
-        if (overallScore >= 55) return "Moderate Match";
-        if (overallScore >= 40) return "Weak Match";
-        return "Poor Match";
+        return switch (SectionScore.deriveStatus(overallScore)) {
+            case SectionScore.EXCELLENT -> "Excellent Match";
+            case SectionScore.STRONG    -> "Strong Match";
+            case SectionScore.MODERATE  -> "Moderate Match";
+            case SectionScore.WEAK      -> "Weak Match";
+            default                     -> "Poor Match";
+        };
     }
 
     // Helpers
     private boolean isMatchedInResume(String keyword, String resumeText) {
-        String lower = resumeText.toLowerCase();
-        if (lower.contains(keyword.toLowerCase())) return true;
+        String lower = resumeText.toLowerCase(Locale.ROOT);
+        if (lower.contains(keyword.toLowerCase(Locale.ROOT))) return true;
         // Fuzzy match: split resume into tokens and check each
         return Arrays.stream(TfIdfCalculator.tokenize(resumeText))
             .anyMatch(token -> similarity.isFuzzyMatch(token, keyword, LEVENSHTEIN_THRESHOLD));
@@ -362,7 +365,7 @@ public class ATSScoreEngine {
     }
 
     private boolean hasActionVerb(String text) {
-        String lower = text.toLowerCase();
+        String lower = text.toLowerCase(Locale.ROOT);
         return ACTION_VERBS.stream().anyMatch(v -> lower.startsWith(v) || lower.contains(" " + v + " "));
     }
 
@@ -378,7 +381,7 @@ public class ATSScoreEngine {
     );
 
     private long countSpellingErrors(String text) {
-        String lower = text.toLowerCase();
+        String lower = text.toLowerCase(Locale.ROOT);
         return COMMON_MISSPELLINGS.stream().filter(lower::contains).count();
     }
 

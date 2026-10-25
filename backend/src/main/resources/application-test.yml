@@ -2,6 +2,10 @@
 # Uses H2 in-memory (MySQL-compatibility mode to handle LONGTEXT/TEXT column definitions).
 # JWT secret set directly so no DB_PASSWORD / JWT_SECRET env vars are required.
 spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL;NON_KEYWORDS=VALUE
     username: sa

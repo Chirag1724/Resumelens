@@ -16,8 +16,9 @@ public class SectionScore {
 
     // Status constants
     public static final String EXCELLENT = "EXCELLENT";  // >= 85
-    public static final String GOOD      = "GOOD";       // 70-84
-    public static final String AVERAGE   = "AVERAGE";    // 40-69
+    public static final String STRONG    = "STRONG";     // 70-84
+    public static final String MODERATE  = "MODERATE";   // 55-69
+    public static final String WEAK      = "WEAK";       // 40-54
     public static final String POOR      = "POOR";       // < 40
 
     @Id
@@ -59,10 +60,11 @@ public class SectionScore {
         this.missingKeywords = missingKeywords;
     }
 
-    private static String deriveStatus(double score) {
+    public static String deriveStatus(double score) {
         if (score >= 85) return EXCELLENT;
-        if (score >= 70) return GOOD;
-        if (score >= 40) return AVERAGE;
+        if (score >= 70) return STRONG;
+        if (score >= 55) return MODERATE;
+        if (score >= 40) return WEAK;
         return POOR;
     }
 

@@ -91,6 +91,13 @@ public final class TestData {
                 resumeId, rawJd, jobTitle);
     }
 
+    public static String matchJson(java.util.UUID resumeId, String rawJd, String jobTitle) {
+        return String.format(
+                "{\"resumeId\":\"%s\",\"rawJobDescription\":\"%s\",\"jobTitle\":\"%s\"}",
+                resumeId, rawJd, jobTitle);
+    }
+
+
     /**
      * Generates a string of N unique tokens so that no single token appears more
      * than once.

@@ -61,7 +61,7 @@ public ResponseEntity<ApiResponse<AnalysisResponse>> analyze(
 ### Service Layer Pattern
 
 - One service per domain area (analysis, auth, history, scoring, etc.).
-- Services may call other services (e.g., `AnalysisService` → `ScoringService`).
+- Services may call other services (e.g., `AnalysisService` calls `ATSScoreEngine`).
 - Services must **not** call controllers.
 - Algorithm classes (`TfIdfCalculator`, etc.) are stateless utilities — inject as `@Component` and call their pure methods.
 

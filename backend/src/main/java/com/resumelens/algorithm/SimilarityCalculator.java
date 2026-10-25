@@ -1,5 +1,6 @@
 package com.resumelens.algorithm;
 import org.springframework.stereotype.Component;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
@@ -59,6 +60,6 @@ public class SimilarityCalculator {
 
     /** Returns true if the Levenshtein distance between a and b is <= threshold. */
     public boolean isFuzzyMatch(String a, String b, int threshold) {
-        return levenshteinDistance(a.toLowerCase(), b.toLowerCase()) <= threshold;
+        return levenshteinDistance(a.toLowerCase(Locale.ROOT), b.toLowerCase(Locale.ROOT)) <= threshold;
     }
 }

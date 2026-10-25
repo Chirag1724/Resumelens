@@ -1,9 +1,10 @@
 package com.resumelens.dto.response;
 
 import java.util.List;
+import java.util.UUID;
 
 public record AnalysisResponse(
-        Long matchResultId,
+        UUID id,
         Double overallScore,
         String statusLabel,
         Double atsScore,

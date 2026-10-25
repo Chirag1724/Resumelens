@@ -50,7 +50,7 @@ class AuthControllerIT {
     }
 
     @Test
-    void should_return409OrConflict_whenSameEmailRegisteredTwice() throws Exception {
+    void should_return400_whenSameEmailRegisteredTwice() throws Exception {
         String body = TestData.registerJson(TestData.USER_EMAIL, TestData.USER_PASSWORD, TestData.USER_NAME);
 
         // First registration succeeds
@@ -59,15 +59,13 @@ class AuthControllerIT {
                 .content(body))
                 .andExpect(status().isCreated());
 
-        // Second registration with the same email must fail with a 4xx status
-        MvcResult second = mockMvc.perform(post("/api/v1/auth/register")
+        // Second registration with the same email must fail with exactly 400 Bad Request
+        mockMvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
-                .andReturn();
-
-        int status = second.getResponse().getStatus();
-        assertTrue(status >= 400 && status < 500,
-                "Duplicate email registration must return a 4xx status, got: " + status);
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());
     }
 
     // Login
@@ -105,18 +103,18 @@ class AuthControllerIT {
         mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(TestData.loginJson(TestData.USER_EMAIL, "WrongPassword!")))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());
     }
 
     @Test
-    void should_return4xx_whenLoginWithNonExistentEmail() throws Exception {
+    void should_return401_whenLoginWithNonExistentEmail() throws Exception {
         mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(TestData.loginJson("nobody@example.com", "password")))
-                .andExpect(result -> {
-                    int status = result.getResponse().getStatus();
-                    assertTrue(status >= 400 && status < 500,
-                            "Login for unknown email must return 4xx, got: " + status);
-                });
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").isNotEmpty());
     }
 }

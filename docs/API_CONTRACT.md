@@ -46,11 +46,12 @@ Mapped centrally by `GlobalExceptionHandler`:
 
 | Status Code | Exception Type | Description |
 |:---|:---|:---|
-| **400 Bad Request** | `InvalidInputException` / `MethodArgumentNotValidException` | Validation failed (missing required field, password < 8 chars, empty file, duplicate email). |
-| **401 Unauthorized** | `BadCredentialsException` / Spring Security Auth Error | Invalid email or password, or missing/invalid/expired JWT on protected routes. |
-| **403 Forbidden** | Spring Security Access Denied | Access denied to protected resource. |
-| **404 Not Found** | `ResourceNotFoundException` | Specified resource ID (resume, JD, match result) does not exist. |
-| **415 Unsupported Media Type** | `UnsupportedFileTypeException` | Uploaded resume is neither `.pdf` nor `.docx`. |
+| **400 Bad Request** | `InvalidInputException` / `MethodArgumentNotValidException` / `MethodArgumentTypeMismatchException` / `IllegalArgumentException` / `HttpMessageNotReadableException` | Validation failed (missing required field, invalid UUID format, password < 8 chars, empty file, duplicate email). |
+| **401 Unauthorized** | `BadCredentialsException` / Spring Security Auth Error | Invalid email or password, or missing/invalid/expired JWT on protected routes. Returns standard ApiResponse JSON body. |
+| **403 Forbidden** | Spring Security Access Denied | Access denied to protected resource. Returns standard ApiResponse JSON body. |
+| **404 Not Found** | `ResourceNotFoundException` | Specified resource UUID does not exist. Generic message returned without entity class names or IDs. |
+| **413 Payload Too Large** | `MaxUploadSizeExceededException` | Uploaded file exceeds maximum allowed limit (10MB). |
+| **415 Unsupported Media Type** | `UnsupportedFileTypeException` | Uploaded resume magic bytes do not match PDF (%PDF-) or DOCX (PK 0x03 0x04). |
 | **422 Unprocessable Entity** | `ResumeParseException` | File is corrupted or text layer cannot be parsed. |
 | **500 Internal Server Error** | `Exception` / `ReportGenerationException` | Unhandled server exception or PDF rendering failure. (Stack traces are never exposed). |
 
@@ -168,17 +169,18 @@ Controller: `com.resumelens.controller.ResumeController`
   "success": true,
   "message": "OK",
   "data": {
-    "resumeId": 42
+    "resumeId": "b3f62821-4f1d-48a5-b3e1-7ca830573e04"
   }
 }
 ```
 | Response Field | Type | Description |
 |:---|:---|:---|
-| `resumeId` | `Long` | Database-assigned unique ID of persisted resume |
+| `resumeId` | `UUID (String)` | Unguessable public capability UUID of persisted resume |
 
 #### Error Status Codes
 - `400 Bad Request`: File is missing or empty (`"Uploaded file is empty."`).
-- `415 Unsupported Media Type`: File is not PDF or DOCX (`"Unsupported file type. Only PDF and DOCX are supported."`).
+- `413 Payload Too Large`: Uploaded file exceeds maximum allowed limit (10MB).
+- `415 Unsupported Media Type`: File signature does not match PDF or DOCX (`"Unsupported file type. Only PDF and DOCX are supported."`).
 - `422 Unprocessable Entity`: Corrupt file or text extraction failure.
 - `500 Internal Server Error`: Server failure during processing.
 
@@ -187,6 +189,9 @@ Controller: `com.resumelens.controller.ResumeController`
 ## 4. Analysis Endpoints (`/api/v1/analysis`)
 
 Controller: `com.resumelens.controller.AnalysisController`
+
+### Capability URL & Guest Access Model
+All analysis and report retrieval endpoints use unguessable UUIDs as public capabilities. In line with the guest access model ("anyone with the link can view"), possession of the valid public UUID grants read access to the match result, PDF report, and fix-prompt without requiring authentication. Numeric IDs remain strictly internal and are never exposed in URLs or responses.
 
 ### 4.1 Run Analysis / Match
 - **Method:** `POST`
@@ -197,7 +202,7 @@ Controller: `com.resumelens.controller.AnalysisController`
 #### Request Body (`AnalysisRequest`)
 ```json
 {
-  "resumeId": 42,
+  "resumeId": "b3f62821-4f1d-48a5-b3e1-7ca830573e04",
   "jobDescriptionId": null,
   "rawJobDescription": "We are looking for a Senior Java Developer with Spring Boot, Docker, and Kubernetes experience...",
   "jobTitle": "Senior Java Developer"
@@ -205,7 +210,7 @@ Controller: `com.resumelens.controller.AnalysisController`
 ```
 | Field | Type | Required | Description |
 |:---|:---|:---|:---|
-| `resumeId` | `Long` | Yes (`@NotNull`) | ID of the previously uploaded resume |
+| `resumeId` | `UUID (String)` | Yes (`@NotNull`) | Public UUID of the previously uploaded resume |
 | `jobDescriptionId` | `Long` | Conditional | ID of an existing JD (provide this OR `rawJobDescription`) |
 | `rawJobDescription` | `String` | Conditional | Plain text JD (provide this OR `jobDescriptionId`) |
 | `jobTitle` | `String` | No | Optional job title label used in prompts and reports |
@@ -216,7 +221,7 @@ Controller: `com.resumelens.controller.AnalysisController`
   "success": true,
   "message": "OK",
   "data": {
-    "matchResultId": 101,
+    "id": "e2a394c8-3c4a-4467-8ef0-9bb499b70b4a",
     "overallScore": 78.45,
     "statusLabel": "Strong Match",
     "atsScore": 82.0,
@@ -230,7 +235,7 @@ Controller: `com.resumelens.controller.AnalysisController`
       {
         "sectionName": "ATS_COMPATIBILITY",
         "score": 82.0,
-        "status": "GOOD",
+        "status": "STRONG",
         "feedback": "ATS formatting and keyword compliance",
         "matchedKeywords": "[]",
         "missingKeywords": "[]"
@@ -238,7 +243,7 @@ Controller: `com.resumelens.controller.AnalysisController`
       {
         "sectionName": "SKILLS_VALIDATION",
         "score": 75.5,
-        "status": "GOOD",
+        "status": "STRONG",
         "feedback": "Keyword and skill match against job description",
         "matchedKeywords": "[\"java\", \"spring boot\", \"docker\"]",
         "missingKeywords": "[\"kubernetes\", \"microservices\"]"
@@ -246,7 +251,7 @@ Controller: `com.resumelens.controller.AnalysisController`
       {
         "sectionName": "IMPACT_ACHIEVEMENTS",
         "score": 80.0,
-        "status": "GOOD",
+        "status": "STRONG",
         "feedback": "Quantified achievements and action verb usage",
         "matchedKeywords": "[]",
         "missingKeywords": "[]"
@@ -254,7 +259,7 @@ Controller: `com.resumelens.controller.AnalysisController`
       {
         "sectionName": "PROJECT_QUALITY",
         "score": 75.0,
-        "status": "GOOD",
+        "status": "STRONG",
         "feedback": "Project section completeness and measurable outcomes",
         "matchedKeywords": "[]",
         "missingKeywords": "[]"
@@ -298,22 +303,22 @@ Controller: `com.resumelens.controller.AnalysisController`
 #### Field Types & Value Spaces
 | Field | Type | Range / Format | Description |
 |:---|:---|:---|:---|
-| `matchResultId` | `Long` | Positive integer | Unique identifier of this match result |
-| `overallScore` | `Double` | `0.00` – `100.00` | Weighted aggregate score |
+| `id` | `UUID (String)` | UUID string | Unique unguessable capability identifier of this match result |
+| `overallScore` | `Double` | `0.00` - `100.00` | Weighted aggregate score |
 | `statusLabel` | `String` | `"Excellent Match"` \| `"Strong Match"` \| `"Moderate Match"` \| `"Weak Match"` \| `"Poor Match"` | Qualitative score tier |
-| `atsScore` | `Double` | `0.0` – `100.0` | ATS formatting dimension score (25%) |
-| `skillsScore` | `Double` | `0.0` – `100.0` | TF-IDF + Cosine similarity skill score (25%) |
-| `impactScore` | `Double` | `0.0` – `100.0` | Quantified achievements score (20%) |
-| `projectScore` | `Double` | `0.0` – `100.0` | Project section completeness score (15%) |
-| `writingScore` | `Double` | `0.0` – `100.0` | Grammar & writing style score (10%) |
-| `professionalismScore` | `Double` | `0.0` – `100.0` | Length & formatting consistency score (5%) |
-| `keywordMatchPercent` | `Double` | `0.0` – `100.0` | Raw percentage of JD keywords matched |
-| `sectionScores` | `List<SectionScoreResponse>` | 6 items | Dimension breakdown |
-| `suggestions` | `List<SuggestionResponse>` | 0–5 items | Top actionable improvement recommendations |
+| `atsScore` | `Double` | `0.0` - `100.0` | ATS formatting dimension score (25%) |
+| `skillsScore` | `Double` | `0.0` - `100.0` | TF-IDF + Cosine similarity skill score (25%) |
+| `impactScore` | `Double` | `0.0` - `100.0` | Quantified achievements score (20%) |
+| `projectScore` | `Double` | `0.0` - `100.0` | Project section completeness score (15%) |
+| `writingScore` | `Double` | `0.0` - `100.0` | Grammar & writing style score (10%) |
+| `professionalismScore` | `Double` | `0.0` - `100.0` | Length & formatting consistency score (5%) |
+| `keywordMatchPercent` | `Double` | `0.0` - `100.0` | Raw percentage of JD keywords matched |
+| `sectionScores` | `List<SectionScoreResponse>` | 6 items | Dimension breakdown (`status`: `"EXCELLENT"` \| `"STRONG"` \| `"MODERATE"` \| `"WEAK"` \| `"POOR"`) |
+| `suggestions` | `List<SuggestionResponse>` | 0-5 items | Top actionable improvement recommendations |
 | `improvementPrompt` | `String` | Formatted text | Copyable prompt formatted for external AI assistant |
 
 #### Error Status Codes
-- `400 Bad Request`: `resumeId` is null, or neither `jobDescriptionId` nor `rawJobDescription` was supplied.
+- `400 Bad Request`: `resumeId` is null, invalid UUID format, or neither `jobDescriptionId` nor `rawJobDescription` was supplied.
 - `404 Not Found`: `resumeId` or `jobDescriptionId` does not exist.
 - `500 Internal Server Error`: Processing failure during scoring or prompt generation.
 
@@ -321,54 +326,56 @@ Controller: `com.resumelens.controller.AnalysisController`
 
 ### 4.2 Get Analysis Result
 - **Method:** `GET`
-- **Path:** `/api/v1/analysis/{matchResultId}`
+- **Path:** `/api/v1/analysis/{id}`
 - **Auth Requirement:** Guest / Public (`permitAll`)
 
 #### Path Parameters
 | Parameter | Type | Required | Description |
 |:---|:---|:---|:---|
-| `matchResultId` | `Long` | Yes | ID of the match result to fetch |
+| `id` | `UUID (String)` | Yes | Public capability UUID of the match result to fetch |
 
 #### Success Response (`200 OK`)
 Returns `ApiResponse<AnalysisResponse>` with the same structure as `POST /api/v1/analysis/match` (suggestions list is `[]` on cached retrieval).
 
 #### Error Status Codes
-- `404 Not Found`: No match result exists with ID `{matchResultId}`.
+- `400 Bad Request`: Invalid UUID format.
+- `404 Not Found`: No match result exists with UUID `{id}`.
 - `500 Internal Server Error`: Generic internal server error.
 
 ---
 
 ### 4.3 Download PDF Report
 - **Method:** `GET`
-- **Path:** `/api/v1/analysis/{matchResultId}/report`
+- **Path:** `/api/v1/analysis/{id}/report`
 - **Auth Requirement:** Guest / Public (`permitAll`)
 - **Headers Returned:**
   - `Content-Type: application/pdf`
-  - `Content-Disposition: attachment; filename="ats-report-{matchResultId}.pdf"`
+  - `Content-Disposition: attachment; filename="ats-report-{id}.pdf"`
 
 #### Path Parameters
 | Parameter | Type | Required | Description |
 |:---|:---|:---|:---|
-| `matchResultId` | `Long` | Yes | ID of the match result |
+| `id` | `UUID (String)` | Yes | Public capability UUID of the match result |
 
 #### Success Response (`200 OK`)
 - **Body:** Raw binary byte array (`byte[]`) containing the generated iText PDF document.
 
 #### Error Status Codes
-- `404 Not Found`: Match result with `{matchResultId}` does not exist.
+- `400 Bad Request`: Invalid UUID format.
+- `404 Not Found`: Match result with UUID `{id}` does not exist.
 - `500 Internal Server Error`: PDF generation failed (`ReportGenerationException`).
 
 ---
 
 ### 4.4 Get Copyable Fix-Prompt
 - **Method:** `GET`
-- **Path:** `/api/v1/analysis/{matchResultId}/fix-prompt`
+- **Path:** `/api/v1/analysis/{id}/fix-prompt`
 - **Auth Requirement:** Guest / Public (`permitAll`)
 
 #### Path Parameters
 | Parameter | Type | Required | Description |
 |:---|:---|:---|:---|
-| `matchResultId` | `Long` | Yes | ID of the match result |
+| `id` | `UUID (String)` | Yes | Public capability UUID of the match result |
 
 #### Query Parameters
 | Parameter | Type | Required | Default | Description |
@@ -385,6 +392,7 @@ Returns `ApiResponse<AnalysisResponse>` with the same structure as `POST /api/v1
 ```
 
 #### Error Status Codes
+- `400 Bad Request`: Invalid UUID format.
 - `404 Not Found`: Match result does not exist.
 - `500 Internal Server Error`: Failure assembling prompt.
 
@@ -407,8 +415,8 @@ Controller: `com.resumelens.controller.HistoryController`
   "message": "OK",
   "data": [
     {
-      "matchResultId": 101,
-      "resumeId": 42,
+      "id": "e2a394c8-3c4a-4467-8ef0-9bb499b70b4a",
+      "resumeId": "b3f62821-4f1d-48a5-b3e1-7ca830573e04",
       "resumeFileName": "jane_doe_resume.pdf",
       "jobTitle": "Senior Java Developer",
       "overallScore": 78.45,
@@ -416,8 +424,8 @@ Controller: `com.resumelens.controller.HistoryController`
       "analyzedAt": "2026-10-15T22:30:00"
     },
     {
-      "matchResultId": 95,
-      "resumeId": 42,
+      "id": "7bc932a1-12a8-4449-9df1-801211ef5123",
+      "resumeId": "b3f62821-4f1d-48a5-b3e1-7ca830573e04",
       "resumeFileName": "jane_doe_resume.pdf",
       "jobTitle": "Cloud Infrastructure Lead",
       "overallScore": 64.20,
@@ -429,16 +437,17 @@ Controller: `com.resumelens.controller.HistoryController`
 ```
 | Response Field | Type | Description |
 |:---|:---|:---|
-| `matchResultId` | `Long` | ID of the analysis match result |
-| `resumeId` | `Long` | ID of the analyzed resume |
+| `id` | `UUID (String)` | Unguessable public capability UUID of the analysis match result |
+| `resumeId` | `UUID (String)` | Unguessable public capability UUID of the analyzed resume |
 | `resumeFileName` | `String` | Original name of uploaded resume file |
 | `jobTitle` | `String` | Target job title |
-| `overallScore` | `Double` | Overall score (0–100) |
+| `overallScore` | `Double` | Overall score (0-100) |
 | `statusLabel` | `String` | Status label tier |
 | `analyzedAt` | `String (ISO-8601)` | Timestamp when analysis was run |
 
-#### Ordering
+#### Ordering & Pagination
 - Results are strictly sorted in descending chronological order (`analyzedAt DESC`).
+- Returns only the latest 50 results via PageRequest.
 
 #### Error Status Codes
 - `401 Unauthorized` / `403 Forbidden`: Request is unauthenticated or token is expired/invalid.
@@ -467,6 +476,6 @@ Controller: `com.resumelens.controller.HealthController`
 ## 7. Frontend Integration Checklist
 
 1. **Base URL configuration:** Set Axios `baseURL` to `/api/v1` (or `http://localhost:8080/api/v1` in local development).
-2. **Guest upload flow:** Call `POST /resumes/upload` with FormData `file`, extract `data.resumeId`, then call `POST /analysis/match` with `{ resumeId, rawJobDescription, jobTitle }`. Store `matchResultId` in client state.
+2. **Guest upload flow:** Call `POST /resumes/upload` with FormData `file`, extract UUID `data.resumeId`, then call `POST /analysis/match` with `{ resumeId, rawJobDescription, jobTitle }`. Store match result UUID `id` in client state.
 3. **Report & Fix Prompt:** Fetch PDF binary from `GET /analysis/{id}/report` with `responseType: 'blob'`, and prompt from `GET /analysis/{id}/fix-prompt`.
 4. **Auth tokens:** Store JWT from `POST /auth/login` or `POST /auth/register` in `localStorage` or in-memory auth state, and attach via Axios request interceptor.

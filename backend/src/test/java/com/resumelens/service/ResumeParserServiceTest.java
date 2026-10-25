@@ -6,10 +6,14 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+import org.apache.poi.xwpf.usermodel.Document;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Map;
@@ -161,7 +165,82 @@ class ResumeParserServiceTest {
                 "Normal single-column resume text must not trigger formatting risk");
     }
 
+    // Graphics detection tests
+
+    @Test
+    void should_detectGraphics_whenPdfContainsImageXObject() throws IOException {
+        byte[] pdfBytes = buildPdfWithImage();
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "resume.pdf", "application/pdf", pdfBytes);
+
+        assertTrue(service.hasGraphics(file), "PDF containing image XObject must be flagged with graphics risk");
+    }
+
+    @Test
+    void should_notDetectGraphics_whenPdfHasNoImages() throws IOException {
+        byte[] pdfBytes = buildSamplePdf(SAMPLE_TEXT);
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "resume.pdf", "application/pdf", pdfBytes);
+
+        assertFalse(service.hasGraphics(file), "PDF without images must not be flagged with graphics risk");
+    }
+
+    @Test
+    void should_detectGraphics_whenDocxContainsPictures() throws Exception {
+        byte[] docxBytes = buildDocxWithImage();
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "resume.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                docxBytes);
+
+        assertTrue(service.hasGraphics(file), "DOCX containing pictures must be flagged with graphics risk");
+    }
+
+    @Test
+    void should_notDetectGraphics_whenDocxHasNoPictures() throws IOException {
+        byte[] docxBytes = buildSampleDocx(SAMPLE_TEXT);
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "resume.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                docxBytes);
+
+        assertFalse(service.hasGraphics(file), "DOCX without pictures must not be flagged with graphics risk");
+    }
+
     // Helpers
+
+    private static byte[] buildPdfWithImage() throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (PDDocument doc = new PDDocument()) {
+            PDPage page = new PDPage();
+            doc.addPage(page);
+            BufferedImage bim = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
+            PDImageXObject img = LosslessFactory.createFromImage(doc, bim);
+            try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 10);
+                cs.newLineAtOffset(50, 700);
+                cs.showText("Some text");
+                cs.endText();
+                cs.drawImage(img, 100, 100);
+            }
+            doc.save(baos);
+        }
+        return baos.toByteArray();
+    }
+
+    private static byte[] buildDocxWithImage() throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (XWPFDocument doc = new XWPFDocument()) {
+            var p = doc.createParagraph();
+            var r = p.createRun();
+            r.setText("Some text");
+            byte[] dummyImage = new byte[]{ (byte)0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+            doc.addPictureData(dummyImage, Document.PICTURE_TYPE_PNG);
+            doc.write(baos);
+        }
+        return baos.toByteArray();
+    }
 
     private static byte[] buildSamplePdf(String text) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
