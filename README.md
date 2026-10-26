@@ -34,7 +34,7 @@ ResumeLens accepts a resume (PDF or plain text) and a job description, then prod
 |-------|------------|
 | Frontend | React 18 + Vite, plain CSS |
 | Backend | Spring Boot (Java 17+), Spring Data JPA |
-| Database | MySQL 8+ |
+| Database | PostgreSQL 15+ (hosted on Supabase) |
 | Authentication | JWT via Spring Security |
 | PDF parsing | Apache PDFBox |
 | DOCX parsing | Apache POI |
@@ -71,7 +71,7 @@ docs/       Architecture documentation, scoring rules, conventions, and decision
 - Java 17 or later
 - Maven 3.8 or later
 - Node.js 18 or later
-- MySQL 8 running locally
+- PostgreSQL 15 running locally, or a Supabase project
 
 ### Backend Setup
 
@@ -82,11 +82,14 @@ docs/       Architecture documentation, scoring rules, conventions, and decision
    cd Resumelens
    ```
 
-2. Create a MySQL database named `resumelens`.
+2. Create a PostgreSQL database.
 
+   **Local PostgreSQL:**
    ```sql
-   CREATE DATABASE resumelens CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   CREATE DATABASE resumelens;
    ```
+
+   **Supabase:** Create a project at [supabase.com](https://supabase.com). The `postgres` database is created automatically. Retrieve your Session pooler connection string from Project Settings > Database.
 
 3. Set up your environment variables.
 
@@ -99,19 +102,27 @@ docs/       Architecture documentation, scoring rules, conventions, and decision
 
    > **Important:** Spring Boot does **not** load `.env` files natively. Do **not** add a dotenv library — instead, export the variables in your shell before running the application, or configure them in your IDE run configuration.
 
-   **Shell (Linux / macOS / Git Bash):**
+   **Shell (Linux / macOS / Git Bash) — local PostgreSQL:**
    ```bash
-   export DB_URL=jdbc:mysql://localhost:3306/resumelens?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-   export DB_USERNAME=root
-   export DB_PASSWORD=your_mysql_password
+   export DB_URL=jdbc:postgresql://localhost:5432/resumelens
+   export DB_USERNAME=postgres
+   export DB_PASSWORD=your_postgres_password
    export JWT_SECRET=your_long_random_secret_here
    ```
 
-   **PowerShell (Windows):**
+   **Shell (Linux / macOS / Git Bash) — Supabase Session pooler:**
+   ```bash
+   export DB_URL=jdbc:postgresql://HOST_FROM_DASHBOARD:5432/postgres?sslmode=require
+   export DB_USERNAME=postgres.YOUR_PROJECT_REF
+   export DB_PASSWORD=your_database_password
+   export JWT_SECRET=your_long_random_secret_here
+   ```
+
+   **PowerShell (Windows) — local PostgreSQL:**
    ```powershell
-   $env:DB_URL      = "jdbc:mysql://localhost:3306/resumelens?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
-   $env:DB_USERNAME = "root"
-   $env:DB_PASSWORD = "your_mysql_password"
+   $env:DB_URL      = "jdbc:postgresql://localhost:5432/resumelens"
+   $env:DB_USERNAME = "postgres"
+   $env:DB_PASSWORD = "your_postgres_password"
    $env:JWT_SECRET  = "your_long_random_secret_here"
    ```
 

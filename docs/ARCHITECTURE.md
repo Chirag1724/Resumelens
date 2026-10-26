@@ -23,7 +23,7 @@ ResumeLens follows a classic three-tier architecture:
                      │  Spring Data JPA / Hibernate
 ┌────────────────────▼────────────────────────────────────┐
 │                   DATA TIER                             │
-│                    MySQL 8+                             │
+│          PostgreSQL 15+ (hosted on Supabase)            │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -162,7 +162,7 @@ backend/
 |--------|------|-------------|
 | `id` | BIGINT | PK, AUTO_INCREMENT |
 | `user_id` | BIGINT | FK → users.id, NULLABLE (guest submissions) |
-| `raw_text` | LONGTEXT | NOT NULL |
+| `raw_text` | TEXT | NOT NULL |
 | `file_name` | VARCHAR(255) | |
 | `uploaded_at` | DATETIME | DEFAULT NOW() |
 
@@ -175,7 +175,7 @@ backend/
 | `id` | BIGINT | PK, AUTO_INCREMENT |
 | `user_id` | BIGINT | FK → users.id, NULLABLE |
 | `title` | VARCHAR(255) | |
-| `raw_text` | LONGTEXT | NOT NULL |
+| `raw_text` | TEXT | NOT NULL |
 | `created_at` | DATETIME | DEFAULT NOW() |
 
 ---
@@ -196,7 +196,7 @@ backend/
 | `writing_score` | DECIMAL(5,2) | |
 | `professionalism_score` | DECIMAL(5,2) | |
 | `status_label` | VARCHAR(50) | e.g., "Strong Match", "Weak Match" |
-| `improvement_prompt` | LONGTEXT | Generated copyable prompt |
+| `improvement_prompt` | TEXT | Generated copyable prompt |
 | `analyzed_at` | DATETIME | DEFAULT NOW() |
 
 ---

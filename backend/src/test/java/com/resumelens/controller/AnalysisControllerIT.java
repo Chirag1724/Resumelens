@@ -275,5 +275,54 @@ class AnalysisControllerIT {
         assertFalse(responseBody.contains("com.resumelens"), "404 response must not contain package name");
         assertEquals("{\"success\":false,\"message\":\"The requested resource was not found.\",\"data\":null}", responseBody);
     }
+
+    // Suggestions match between POST and GET
+
+    @Test
+    void should_returnSameSuggestionsInGetAsInPostMatch() throws Exception {
+        String matchBody = mockMvc.perform(post("/api/v1/analysis/match")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestData.matchJson(resumeId, SAMPLE_JD, "Software Engineer")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode postSuggestions = mapper.readTree(matchBody).path("data").path("suggestions");
+        String idStr = mapper.readTree(matchBody).path("data").path("id").asText();
+        UUID id = UUID.fromString(idStr);
+
+        String getBody = mockMvc.perform(get("/api/v1/analysis/{id}", id))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode getSuggestions = mapper.readTree(getBody).path("data").path("suggestions");
+
+        assertFalse(postSuggestions.isEmpty(), "POST suggestions must not be empty");
+        assertEquals(postSuggestions, getSuggestions, "GET suggestions must equal POST suggestions for the same result");
+    }
+
+    // Risks match between POST and GET
+
+    @Test
+    void should_returnSameRisksInGetAsInPostMatch() throws Exception {
+        String matchBody = mockMvc.perform(post("/api/v1/analysis/match")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestData.matchJson(resumeId, SAMPLE_JD, "Software Engineer")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode postRisks = mapper.readTree(matchBody).path("data").path("risks");
+        String idStr = mapper.readTree(matchBody).path("data").path("id").asText();
+        UUID id = UUID.fromString(idStr);
+
+        String getBody = mockMvc.perform(get("/api/v1/analysis/{id}", id))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode getRisks = mapper.readTree(getBody).path("data").path("risks");
+
+        assertNotNull(postRisks, "POST risks must not be null");
+        assertFalse(postRisks.isEmpty(), "POST risks must not be empty for sample resume");
+        assertEquals(postRisks, getRisks, "GET risks must equal POST risks for the same result");
+    }
 }
 

@@ -127,4 +127,4 @@ The system must calculate and return scores (0.00 – 100.00) across six discret
 
 ### 3.5 Architectural Constraints
 - **No Paid API Dependency:** All algorithms (TF-IDF, Levenshtein, Cosine Similarity) are implemented natively in Java.
-- **Database Portability:** Managed with Flyway migrations on MySQL 8; compatible with H2 in-memory test profiles.
+- **Database Portability:** Managed with Flyway migrations on PostgreSQL 15 (Supabase); compatible with H2 in-memory test profiles.

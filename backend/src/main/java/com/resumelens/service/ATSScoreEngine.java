@@ -2,6 +2,7 @@ package com.resumelens.service;
 
 import com.resumelens.algorithm.SimilarityCalculator;
 import com.resumelens.algorithm.TfIdfCalculator;
+import com.resumelens.dto.response.RiskResponse;
 import com.resumelens.entity.SectionScore;
 import org.springframework.stereotype.Service;
 
@@ -80,6 +81,120 @@ public class ATSScoreEngine {
     private static final Pattern PASSIVE_PATTERN =
         Pattern.compile("\\b(was|were|been|is|are|be)\\s+\\w+ed\\b", Pattern.CASE_INSENSITIVE);
 
+    public record RiskDefinition(String title, String description, String fix) {}
+
+    public static final Map<String, RiskDefinition> RISK_DEFINITIONS = Map.ofEntries(
+        Map.entry("MISSING_SECTIONS", new RiskDefinition(
+            "Missing Section Headings",
+            "Standard section headings are missing from the resume.",
+            "Add standard section headings including Education, Experience, and Skills."
+        )),
+        Map.entry("NO_CONTACT_INFO", new RiskDefinition(
+            "No Contact Info",
+            "No email address or phone number was found on the resume.",
+            "Include your email address and phone number at the top of your resume."
+        )),
+        Map.entry("MULTI_COLUMN_TABLE", new RiskDefinition(
+            "Multi-Column or Table Layout",
+            "Tables or multi-column layouts were detected which can disrupt ATS parsers.",
+            "Use a clean, single-column layout without tables or text boxes."
+        )),
+        Map.entry("GRAPHICS_PRESENT", new RiskDefinition(
+            "Graphics Present",
+            "Embedded images, graphics, or non-standard visual elements were detected.",
+            "Remove images and graphics to ensure clean text parsing."
+        )),
+        Map.entry("KEYWORD_DENSITY_BELOW_30", new RiskDefinition(
+            "Keyword Density Below 30 Percent",
+            "The resume matches a low proportion of keywords from the job description.",
+            "Incorporate more target keywords and skills from the job description."
+        )),
+        Map.entry("KEYWORD_DENSITY_30_TO_50", new RiskDefinition(
+            "Keyword Density Between 30 and 50 Percent",
+            "The resume matches a moderate proportion of keywords from the job description.",
+            "Incorporate additional relevant keywords and skills from the job description."
+        )),
+        Map.entry("NO_MEASURABLE_ACHIEVEMENTS", new RiskDefinition(
+            "No Measurable Achievements",
+            "No quantified metrics or measurable results were found in the resume.",
+            "Include numbers, percentages, or metrics to quantify accomplishments."
+        )),
+        Map.entry("FIRST_PERSON", new RiskDefinition(
+            "First-Person Language",
+            "First-person pronouns were found in the resume text.",
+            "Rewrite sentences in the third person using strong action verbs."
+        )),
+        Map.entry("FILLER_WORDS", new RiskDefinition(
+            "Filler Words",
+            "Weak filler phrases were detected in the experience descriptions.",
+            "Replace filler phrases with concise, direct action verbs."
+        )),
+        Map.entry("REPEATED_WORDS", new RiskDefinition(
+            "Repeated Words",
+            "Certain words appear excessively throughout the resume text.",
+            "Vary your vocabulary and use synonyms to reduce word repetition."
+        )),
+        Map.entry("LONG_SENTENCES", new RiskDefinition(
+            "Long Sentences",
+            "Average sentence length exceeds recommended limits for readability.",
+            "Shorten sentences and break complex statements into concise bullet points."
+        )),
+        Map.entry("PASSIVE_VOICE", new RiskDefinition(
+            "Passive Voice Over 40 Percent",
+            "A large proportion of sentences use passive voice constructions.",
+            "Rewrite passive sentences in active voice with clear subjects and strong action verbs."
+        )),
+        Map.entry("SPELLING_ERRORS", new RiskDefinition(
+            "Spelling Errors",
+            "Spelling errors or typos were detected in the text.",
+            "Proofread and correct misspelled words throughout the document."
+        )),
+        Map.entry("INCONSISTENT_DATES", new RiskDefinition(
+            "Inconsistent Dates",
+            "Date formats vary inconsistently across resume sections.",
+            "Adopt a single consistent date format across all sections."
+        )),
+        Map.entry("INCONSISTENT_BULLETS", new RiskDefinition(
+            "Inconsistent Bullets",
+            "Multiple different bullet styles are used throughout the resume.",
+            "Standardize on a single consistent bullet style across all lists."
+        )),
+        Map.entry("CASUAL_EMAIL", new RiskDefinition(
+            "Casual Email",
+            "The email address appears informal or unprofessional.",
+            "Use a professional email address containing your first and last name."
+        )),
+        Map.entry("OVER_700_WORDS", new RiskDefinition(
+            "Over 700 Words",
+            "Resume length exceeds standard single-column density.",
+            "Condense content to keep your resume concise and within standard length."
+        ))
+    );
+
+    public static String severityFromDeduction(double deduction) {
+        if (deduction >= 15.0) {
+            return "HIGH";
+        } else if (deduction >= 8.0) {
+            return "MEDIUM";
+        } else {
+            return "LOW";
+        }
+    }
+
+    private static int severityRank(String severity) {
+        if ("HIGH".equalsIgnoreCase(severity)) return 1;
+        if ("MEDIUM".equalsIgnoreCase(severity)) return 2;
+        if ("LOW".equalsIgnoreCase(severity)) return 3;
+        return 4;
+    }
+
+    private void recordRisk(List<RiskResponse> risks, String ruleKey, double deduction) {
+        RiskDefinition def = RISK_DEFINITIONS.get(ruleKey);
+        if (def != null) {
+            risks.add(new RiskResponse(def.title(), severityFromDeduction(deduction), def.description(), def.fix()));
+        }
+    }
+
     private final TfIdfCalculator tfidf;
     private final SimilarityCalculator similarity;
     private final ResumeParserService resumeParser;
@@ -97,13 +212,14 @@ public class ATSScoreEngine {
                              boolean hasFormattingRisk, boolean hasGraphicsRisk) {
 
         List<String> jdKeywords = tfidf.topKeywords(jdText, MAX_JD_KEYWORDS);
+        List<RiskResponse> risks = new ArrayList<>();
 
-        double ats     = round(calcAts(resumeText, jdText, jdKeywords, hasFormattingRisk, hasGraphicsRisk));
+        double ats     = round(calcAts(resumeText, jdText, jdKeywords, hasFormattingRisk, hasGraphicsRisk, risks));
         double skills  = round(calcSkills(resumeText, jdText, jdKeywords));
         double impact  = round(calcImpact(resumeText));
         double project = round(calcProject(resumeText));
-        double writing = round(calcWriting(resumeText));
-        double professionalism = round(calcProfessionalism(resumeText));
+        double writing = round(calcWriting(resumeText, risks));
+        double professionalism = round(calcProfessionalism(resumeText, risks));
 
         double overall = round(
             ats    * WEIGHT_ATS    +
@@ -123,15 +239,23 @@ public class ATSScoreEngine {
             .filter(kw -> !isMatchedInResume(kw, resumeText))
             .collect(Collectors.toList());
 
+        risks.sort(Comparator.comparingInt(r -> severityRank(r.severity())));
+
         return new ScoreResult(overall, ats, skills, impact, project, writing,
                                professionalism, statusLabel(overall),
-                               keywordMatchPercent, matched, missing);
+                               keywordMatchPercent, matched, missing, List.copyOf(risks));
+    }
+
+    public List<RiskResponse> computeRisks(String resumeText, String jdText,
+                                           boolean hasFormattingRisk, boolean hasGraphicsRisk) {
+        return score(resumeText, jdText, hasFormattingRisk, hasGraphicsRisk).risks();
     }
 
 
     // 1. ATS Compatibility (SCORING_RULES.md)
     private double calcAts(String resumeText, String jdText, List<String> jdKeywords,
-                           boolean hasFormattingRisk, boolean hasGraphicsRisk) {
+                           boolean hasFormattingRisk, boolean hasGraphicsRisk,
+                           List<RiskResponse> risks) {
         double score = 100.0;
 
         // Missing standard section headings (–8 per, max –24)
@@ -139,27 +263,45 @@ public class ATSScoreEngine {
         long missingSections = REQUIRED_SECTIONS.stream()
             .filter(s -> !lower.contains(s))
             .count();
-        score -= Math.min(missingSections * 8.0, 24.0);
+        if (missingSections > 0) {
+            double deduction = Math.min(missingSections * 8.0, 24.0);
+            score -= deduction;
+            recordRisk(risks, "MISSING_SECTIONS", deduction);
+        }
 
         // Contact info absent (–10)
-        if (!resumeParser.hasContactInfo(resumeText)) score -= 10;
+        if (!resumeParser.hasContactInfo(resumeText)) {
+            score -= 10;
+            recordRisk(risks, "NO_CONTACT_INFO", 10.0);
+        }
 
         // Multi-column / table layout (–10)
-        if (hasFormattingRisk) score -= 10;
+        if (hasFormattingRisk) {
+            score -= 10;
+            recordRisk(risks, "MULTI_COLUMN_TABLE", 10.0);
+        }
 
         // Graphics / non-standard fonts heuristic (–8)
-        if (hasGraphicsRisk) score -= 8;
+        if (hasGraphicsRisk) {
+            score -= 8;
+            recordRisk(risks, "GRAPHICS_PRESENT", 8.0);
+        }
 
         // Keyword density deduction (–15 or –8, not both)
         double matchPct = calcKeywordMatchPercent(resumeText, jdKeywords);
         if (matchPct < 0.30) {
             score -= 15;
+            recordRisk(risks, "KEYWORD_DENSITY_BELOW_30", 15.0);
         } else if (matchPct < 0.50) {
             score -= 8;
+            recordRisk(risks, "KEYWORD_DENSITY_30_TO_50", 8.0);
         }
 
         // No measurable achievements (–5)
-        if (!hasMeasurableAchievements(resumeText)) score -= 5;
+        if (!hasMeasurableAchievements(resumeText)) {
+            score -= 5;
+            recordRisk(risks, "NO_MEASURABLE_ACHIEVEMENTS", 5.0);
+        }
 
         return Math.max(0.0, score);
     }
@@ -255,7 +397,7 @@ public class ATSScoreEngine {
     }
 
     // 5. Writing Quality (SCORING_RULES.md)
-    private double calcWriting(String resumeText) {
+    private double calcWriting(String resumeText, List<RiskResponse> risks) {
         double score = 100.0;
         String[] sentences = resumeText.split("[.!?]+");
 
@@ -263,24 +405,38 @@ public class ATSScoreEngine {
         double avgLen = Arrays.stream(sentences)
             .mapToLong(s -> Arrays.stream(s.split("\\s+")).filter(w -> !w.isBlank()).count())
             .average().orElse(0);
-        if (avgLen > 35) score -= 10;
+        if (avgLen > 35) {
+            score -= 10;
+            recordRisk(risks, "LONG_SENTENCES", 10.0);
+        }
 
         // First-person pronouns (–15)
-        if (FIRST_PERSON.matcher(resumeText).find()) score -= 15;
+        if (FIRST_PERSON.matcher(resumeText).find()) {
+            score -= 15;
+            recordRisk(risks, "FIRST_PERSON", 15.0);
+        }
 
         // Filler words (–3 per occurrence, max –15)
         String lower = resumeText.toLowerCase(Locale.ROOT);
         long fillerCount = FILLER_PHRASES.stream()
             .mapToLong(f -> countOccurrences(lower, f))
             .sum();
-        score -= Math.min(fillerCount * 3.0, 15.0);
+        if (fillerCount > 0) {
+            double deduction = Math.min(fillerCount * 3.0, 15.0);
+            score -= deduction;
+            recordRisk(risks, "FILLER_WORDS", deduction);
+        }
 
         // Repetition (–5 per over-repeated word, max –15)
         Map<String, Long> freq = Arrays.stream(TfIdfCalculator.tokenize(resumeText))
             .filter(w -> w.length() > 2 && !STOPWORDS.contains(w))
             .collect(Collectors.groupingBy(w -> w, Collectors.counting()));
         long repeatedWordCount = freq.values().stream().filter(v -> v > 5).count();
-        score -= Math.min(repeatedWordCount * 5.0, 15.0);
+        if (repeatedWordCount > 0) {
+            double deduction = Math.min(repeatedWordCount * 5.0, 15.0);
+            score -= deduction;
+            recordRisk(risks, "REPEATED_WORDS", deduction);
+        }
 
         // Passive voice ratio > 40% (–10)
         long passiveCount = Arrays.stream(sentences)
@@ -288,6 +444,7 @@ public class ATSScoreEngine {
             .count();
         if (sentences.length > 0 && (double) passiveCount / sentences.length > 0.40) {
             score -= 10;
+            recordRisk(risks, "PASSIVE_VOICE", 10.0);
         }
 
         return Math.max(0.0, score);
@@ -298,7 +455,7 @@ public class ATSScoreEngine {
     private static final Pattern DATE_NUMERIC = Pattern.compile("\\b(0?[1-9]|1[0-2])/\\d{4}\\b");
     private static final Pattern CASUAL_EMAIL = Pattern.compile("[a-z0-9._%+\\-]*(?:cool|swag|sexy|lol|xd|420|69|1337)[a-z0-9._%+\\-]*@", Pattern.CASE_INSENSITIVE);
 
-    private double calcProfessionalism(String resumeText) {
+    private double calcProfessionalism(String resumeText, List<RiskResponse> risks) {
         double score = 100.0;
 
         // Spelling: simple check - words with double-consonant errors or common typos
@@ -306,25 +463,41 @@ public class ATSScoreEngine {
         // Using a small targeted list of the most common resume misspellings.
         // Upgrade path: bundle a curated word list and use a trie lookup.
         long spellingErrors = countSpellingErrors(resumeText);
-        score -= Math.min(spellingErrors * 5.0, 20.0);
+        if (spellingErrors > 0) {
+            double deduction = Math.min(spellingErrors * 5.0, 20.0);
+            score -= deduction;
+            recordRisk(risks, "SPELLING_ERRORS", deduction);
+        }
 
         // Inconsistent date formatting (–10)
         boolean hasAlpha   = DATE_ALPHA.matcher(resumeText).find();
         boolean hasNumeric = DATE_NUMERIC.matcher(resumeText).find();
-        if (hasAlpha && hasNumeric) score -= 10;
+        if (hasAlpha && hasNumeric) {
+            score -= 10;
+            recordRisk(risks, "INCONSISTENT_DATES", 10.0);
+        }
 
         // Inconsistent bullet style (–5)
         boolean hasDash  = resumeText.contains("- ");
         boolean hasBullet = resumeText.contains("• ");
         boolean hasStar   = resumeText.contains("* ");
-        if ((hasDash ? 1 : 0) + (hasBullet ? 1 : 0) + (hasStar ? 1 : 0) > 1) score -= 5;
+        if ((hasDash ? 1 : 0) + (hasBullet ? 1 : 0) + (hasStar ? 1 : 0) > 1) {
+            score -= 5;
+            recordRisk(risks, "INCONSISTENT_BULLETS", 5.0);
+        }
 
         // Casual email address (–10)
-        if (CASUAL_EMAIL.matcher(resumeText).find()) score -= 10;
+        if (CASUAL_EMAIL.matcher(resumeText).find()) {
+            score -= 10;
+            recordRisk(risks, "CASUAL_EMAIL", 10.0);
+        }
 
         // Resume length > 700 words estimated as > 2 pages (–5)
         long wordCount = Arrays.stream(resumeText.split("\\s+")).filter(w -> !w.isBlank()).count();
-        if (wordCount > 700) score -= 5;
+        if (wordCount > 700) {
+            score -= 5;
+            recordRisk(risks, "OVER_700_WORDS", 5.0);
+        }
 
         return Math.max(0.0, score);
     }
@@ -401,6 +574,24 @@ public class ATSScoreEngine {
         String statusLabel,
         double keywordMatchPercent,
         List<String> matchedKeywords,
-        List<String> missingKeywords
-    ) {}
+        List<String> missingKeywords,
+        List<RiskResponse> risks
+    ) {
+        public ScoreResult(
+            double overallScore,
+            double atsScore,
+            double skillsScore,
+            double impactScore,
+            double projectScore,
+            double writingScore,
+            double professionalismScore,
+            String statusLabel,
+            double keywordMatchPercent,
+            List<String> matchedKeywords,
+            List<String> missingKeywords
+        ) {
+            this(overallScore, atsScore, skillsScore, impactScore, projectScore, writingScore,
+                 professionalismScore, statusLabel, keywordMatchPercent, matchedKeywords, missingKeywords, List.of());
+        }
+    }
 }

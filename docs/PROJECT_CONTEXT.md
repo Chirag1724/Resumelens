@@ -6,7 +6,7 @@
 
 ## Project Summary
 
-ResumeLens is a web-based system that evaluates a candidate's resume against a target job description and predicts ATS (Applicant Tracking System) compatibility. It accepts a resume (text or PDF) and a job description as input, then scores and analyses the match using self-implemented text-processing algorithms — TF-IDF for keyword weighting, Cosine Similarity for semantic relevance measurement, and Levenshtein Distance for fuzzy skill matching. The backend is built with Spring Boot and exposes a REST API consumed by a React (Vite) single-page frontend, with all persistent data stored in a MySQL database. The system produces a structured multi-dimensional score, a section-by-section breakdown, and a copyable AI-prompt that users can take to an external assistant to get resume improvement advice — the system itself never calls any AI or LLM API.
+ResumeLens is a web-based system that evaluates a candidate's resume against a target job description and predicts ATS (Applicant Tracking System) compatibility. It accepts a resume (text or PDF) and a job description as input, then scores and analyses the match using self-implemented text-processing algorithms — TF-IDF for keyword weighting, Cosine Similarity for semantic relevance measurement, and Levenshtein Distance for fuzzy skill matching. The backend is built with Spring Boot and exposes a REST API consumed by a React (Vite) single-page frontend, with all persistent data stored in a PostgreSQL database (hosted on Supabase). The system produces a structured multi-dimensional score, a section-by-section breakdown, and a copyable AI-prompt that users can take to an external assistant to get resume improvement advice — the system itself never calls any AI or LLM API.
 
 ---
 

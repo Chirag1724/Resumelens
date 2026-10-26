@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface MatchResultRepository extends JpaRepository<MatchResult, Long> {
+    @EntityGraph(attributePaths = {"resume", "jobDescription"})
     Optional<MatchResult> findByPublicId(UUID publicId);
 
     @EntityGraph(attributePaths = {"resume", "jobDescription"})

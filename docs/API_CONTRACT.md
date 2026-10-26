@@ -295,6 +295,14 @@ All analysis and report retrieval endpoints use unguessable UUIDs as public capa
         "example": "Engineered, Spearheaded, Architected."
       }
     ],
+    "risks": [
+      {
+        "title": "No Contact Info",
+        "severity": "MEDIUM",
+        "description": "No email address or phone number was found on the resume.",
+        "fix": "Include your email address and phone number at the top of your resume."
+      }
+    ],
     "improvementPrompt": "LaTeX improvement prompt..."
   }
 }
@@ -315,7 +323,16 @@ All analysis and report retrieval endpoints use unguessable UUIDs as public capa
 | `keywordMatchPercent` | `Double` | `0.0` - `100.0` | Raw percentage of JD keywords matched |
 | `sectionScores` | `List<SectionScoreResponse>` | 6 items | Dimension breakdown (`status`: `"EXCELLENT"` \| `"STRONG"` \| `"MODERATE"` \| `"WEAK"` \| `"POOR"`) |
 | `suggestions` | `List<SuggestionResponse>` | 0-5 items | Top actionable improvement recommendations |
+| `risks` | `List<RiskResponse>` | 0-16 items | Scoring risks derived from triggered rules, ordered by severity (`HIGH`, `MEDIUM`, `LOW`) |
 | `improvementPrompt` | `String` | Formatted text | Copyable prompt formatted for external AI assistant |
+
+##### Risk Item Structure (`RiskResponse`)
+| Field | Type | Range / Format | Description |
+|:---|:---|:---|:---|
+| `title` | `String` | Text | Human-readable title of the fired rule |
+| `severity` | `String` | `"HIGH"` \| `"MEDIUM"` \| `"LOW"` | Derived from deduction size: >=15 is HIGH, 8–14 is MEDIUM, <8 is LOW |
+| `description` | `String` | Plain sentence | Short description explaining the risk (no dynamic numbers) |
+| `fix` | `String` | Plain sentence | Actionable guidance explaining how to resolve the risk |
 
 #### Error Status Codes
 - `400 Bad Request`: `resumeId` is null, invalid UUID format, or neither `jobDescriptionId` nor `rawJobDescription` was supplied.
@@ -335,7 +352,7 @@ All analysis and report retrieval endpoints use unguessable UUIDs as public capa
 | `id` | `UUID (String)` | Yes | Public capability UUID of the match result to fetch |
 
 #### Success Response (`200 OK`)
-Returns `ApiResponse<AnalysisResponse>` with the same structure as `POST /api/v1/analysis/match` (suggestions list is `[]` on cached retrieval).
+Returns `ApiResponse<AnalysisResponse>` with identical structure and contents as `POST /api/v1/analysis/match` (suggestions and risks are deterministically recomputed from the persisted resume and job description).
 
 #### Error Status Codes
 - `400 Bad Request`: Invalid UUID format.

@@ -174,3 +174,49 @@ After scoring, the system generates a structured copyable prompt. The prompt mus
 4. A fixed instruction block asking the external AI to rewrite or improve the corresponding resume sections.
 
 The system **does not call any external API** to generate this prompt. It is built by string assembly in `PromptBuilderService`.
+
+---
+
+## Scoring Risks System
+
+When deductions fire during evaluation in `ATSScoreEngine`, corresponding risk objects are recorded and attached to the score result and REST responses.
+
+### 1. Risk Attributes
+Each risk consists of:
+- `title`: Standard rule title.
+- `severity`: `"HIGH"`, `"MEDIUM"`, or `"LOW"`.
+- `description`: Plain, factual description of the issue (no dynamic or invented numbers).
+- `fix`: Actionable advice on resolving the deduction.
+
+### 2. Severity Mapping
+Severity is derived directly from the deduction amount incurred by the firing rule:
+- **HIGH**: deduction of 15 points or more (e.g., keyword density < 30%, first-person language, missing sections >= 2).
+- **MEDIUM**: deduction of 8 to 14 points (e.g., missing contact info, multi-column/table layout, graphics present, keyword density 30%–50%, long sentences, passive voice > 40%, inconsistent dates, casual email).
+- **LOW**: deduction below 8 points (e.g., no measurable achievements, inconsistent bullets, over 700 words).
+
+### 3. Fired Rules & Definitions
+All risk titles, descriptions, and fixes are maintained in a constant map (`RISK_DEFINITIONS`) in `ATSScoreEngine`:
+1. **Missing Section Headings**: missing standard headings (Education, Experience, Skills) (–8 to –24).
+2. **No Contact Info**: missing email or phone (–10).
+3. **Multi-Column or Table Layout**: multi-column or table formatting detected (–10).
+4. **Graphics Present**: embedded images or graphics detected (–8).
+5. **Keyword Density Below 30 Percent**: JD keyword match < 30% (–15).
+6. **Keyword Density Between 30 and 50 Percent**: JD keyword match 30%–50% (–8).
+7. **No Measurable Achievements**: no numbers or metric indicators detected (–5).
+8. **First-Person Language**: usage of I, me, my, we, our (–15).
+9. **Filler Words**: weak phrases like "responsible for", "helped with" (–3 per, max –15).
+10. **Repeated Words**: words appearing > 5 times (–5 per, max –15).
+11. **Long Sentences**: average sentence length > 35 words (–10).
+12. **Passive Voice Over 40 Percent**: passive sentence ratio > 40% (–10).
+13. **Spelling Errors**: common misspelled words found (–5 per, max –20).
+14. **Inconsistent Dates**: mix of alpha and numeric date styles (–10).
+15. **Inconsistent Bullets**: mix of bullet characters (–5).
+16. **Casual Email**: informal email pattern (–10).
+17. **Over 700 Words**: resume text exceeding 700 words (–5).
+
+### 4. Ordering & Determinism
+- Risks are sorted in order of severity: `HIGH` first, then `MEDIUM`, then `LOW`.
+- Clean resumes with no triggered deductions produce an empty risks list (`[]`).
+- `GET /api/v1/analysis/{id}` recomputes risks deterministically from persisted inputs, guaranteeing identical output to `POST /api/v1/analysis/match`.
+- The `hasFormattingRisk` scoring input is persisted as a boolean column on `Resume` alongside `hasGraphicsRisk`.
+

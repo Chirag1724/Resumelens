@@ -39,7 +39,7 @@ public class MatchResult {
     /** Keyword match ratio (0.0–1.0) stored for the history view */
     private Double keywordMatchPercent;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "TEXT")
     private String improvementPrompt;
 
     @Column(nullable = false, updatable = false)

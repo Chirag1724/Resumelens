@@ -41,9 +41,10 @@ public class ResumeService {
     public UUID save(MultipartFile file, String targetRole, Integer experienceYears, String email) {
         String rawText = resumeParser.extractText(file);
         boolean hasGraphics = resumeParser.hasGraphics(file);
+        boolean hasFormatting = resumeParser.detectFormattingRisks(rawText);
         User user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
         Resume resume = resumeRepository.save(
-            new Resume(user, file.getOriginalFilename(), rawText, targetRole, experienceYears, hasGraphics));
+            new Resume(user, file.getOriginalFilename(), rawText, targetRole, experienceYears, hasGraphics, hasFormatting));
         return resume.getPublicId();
     }
 }

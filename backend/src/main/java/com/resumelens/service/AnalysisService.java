@@ -1,6 +1,7 @@
 package com.resumelens.service;
 
 import com.resumelens.dto.response.AnalysisResponse;
+import com.resumelens.dto.response.RiskResponse;
 import com.resumelens.dto.response.SectionScoreResponse;
 import com.resumelens.dto.response.SuggestionResponse;
 import com.resumelens.entity.*;
@@ -70,7 +71,7 @@ public class AnalysisService {
         String resumeText = resume.getRawText();
         String jdText     = jd.getDescription();
 
-        boolean hasFormattingRisk = resumeParser.detectFormattingRisks(resumeText);
+        boolean hasFormattingRisk = resume.hasFormattingRisk() || resumeParser.detectFormattingRisks(resumeText);
         boolean hasGraphicsRisk = resume.hasGraphicsRisk();
 
         ATSScoreEngine.ScoreResult scores = scoreEngine.score(
@@ -129,9 +130,10 @@ public class AnalysisService {
             scores.impactScore(), scores.projectScore(),
             scores.writingScore(), scores.professionalismScore(),
             scores.keywordMatchPercent(),
-            sectionResponses, suggestions, prompt);
+            sectionResponses, suggestions, scores.risks(), prompt);
     }
 
+    @Transactional(readOnly = true)
     public AnalysisResponse getResult(UUID matchResultPublicId) {
         MatchResult mr = matchResultRepository.findByPublicId(matchResultPublicId)
             .orElseThrow(() -> new ResourceNotFoundException("MatchResult", matchResultPublicId));
@@ -142,13 +144,42 @@ public class AnalysisService {
                 s.getFeedback(), s.getMatchedKeywords(), s.getMissingKeywords()))
             .collect(Collectors.toList());
 
+        String resumeText = mr.getResume().getRawText();
+        List<String> missingKeywords = extractMissingKeywords(sections);
+        List<String> weakVerbs = suggestionEngine.detectWeakVerbs(resumeText);
+        List<String> unquantified = suggestionEngine.checkQuantification(resumeText);
+        List<SuggestionResponse> suggestions = suggestionEngine.generateTopSuggestions(
+            missingKeywords, weakVerbs, unquantified, mr.getOverallScore());
+
+        String jdText = mr.getJobDescription().getDescription();
+        boolean hasFormattingRisk = mr.getResume().hasFormattingRisk() || resumeParser.detectFormattingRisks(resumeText);
+        boolean hasGraphicsRisk = mr.getResume().hasGraphicsRisk();
+        List<RiskResponse> risks = scoreEngine.score(resumeText, jdText, hasFormattingRisk, hasGraphicsRisk).risks();
+
         return new AnalysisResponse(
             mr.getPublicId(), mr.getOverallScore(), mr.getStatusLabel(),
             mr.getAtsScore(), mr.getSkillsScore(),
             mr.getImpactScore(), mr.getProjectScore(),
             mr.getWritingScore(), mr.getProfessionalismScore(),
-            mr.getKeywordMatchPercent(), sections, List.of(),
-            mr.getImprovementPrompt());
+            mr.getKeywordMatchPercent(), sections, suggestions,
+            risks, mr.getImprovementPrompt());
+    }
+
+    private List<String> extractMissingKeywords(List<SectionScoreResponse> sections) {
+        return sections.stream()
+            .filter(s -> SectionScore.SKILLS_VALIDATION.equals(s.sectionName()))
+            .findFirst()
+            .map(s -> fromJson(s.missingKeywords()))
+            .orElse(List.of());
+    }
+
+    private List<String> fromJson(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            return objectMapper.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+        } catch (JsonProcessingException e) {
+            return List.of();
+        }
     }
 
 

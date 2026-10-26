@@ -629,4 +629,54 @@ class ATSScoreEngineTest {
         assertEquals(8.0, withoutGraphics.atsScore() - withGraphics.atsScore(), 0.01,
                 "Graphics present must give exactly minus 8 deduction");
     }
+
+    // RISKS TESTS
+
+    @Test
+    void should_produceEmptyRisksList_whenResumeIsClean() {
+        ATSScoreEngine.ScoreResult r = engine.score(TestData.GOOD_RESUME, TestData.JD_TWO_TERMS, false, false);
+        assertNotNull(r.risks(), "Risks list must not be null");
+        assertTrue(r.risks().isEmpty(), "A clean resume must produce an empty risks list");
+    }
+
+    @Test
+    void should_produceMediumRiskWithNonEmptyDescriptionAndFix_whenNoContactInfo() {
+        when(resumeParser.hasContactInfo(anyString())).thenReturn(false);
+        ATSScoreEngine.ScoreResult r = engine.score(TestData.GOOD_RESUME, TestData.JD_TWO_TERMS, false, false);
+
+        assertNotNull(r.risks(), "Risks list must not be null");
+        assertEquals(1, r.risks().size(), "Only contact info risk should fire");
+
+        var contactRisk = r.risks().get(0);
+        assertEquals("MEDIUM", contactRisk.severity(), "Contact info deduction (10 points) must produce MEDIUM severity");
+        assertNotNull(contactRisk.title());
+        assertFalse(contactRisk.title().isBlank(), "Risk title must not be blank");
+        assertNotNull(contactRisk.description());
+        assertFalse(contactRisk.description().isBlank(), "Risk description must not be blank");
+        assertNotNull(contactRisk.fix());
+        assertFalse(contactRisk.fix().isBlank(), "Risk fix must not be blank");
+    }
+
+    @Test
+    void should_orderRisksBySeverityHighMediumLow() {
+        // Trigger HIGH (first person: -15), MEDIUM (no contact: -10), LOW (no measurable achievements: -5)
+        when(resumeParser.hasContactInfo(anyString())).thenReturn(false);
+        String resume = "EDUCATION\nBachelor\nEXPERIENCE\nI worked as software engineer with java and python\nSKILLS\njava python";
+        ATSScoreEngine.ScoreResult r = engine.score(resume, TestData.JD_TWO_TERMS, false, false);
+
+        assertNotNull(r.risks());
+        assertFalse(r.risks().isEmpty());
+
+        int prevRank = 0;
+        for (var risk : r.risks()) {
+            int currentRank = switch (risk.severity()) {
+                case "HIGH" -> 1;
+                case "MEDIUM" -> 2;
+                case "LOW" -> 3;
+                default -> 4;
+            };
+            assertTrue(currentRank >= prevRank, "Risks must be sorted in order of severity (HIGH -> MEDIUM -> LOW)");
+            prevRank = currentRank;
+        }
+    }
 }

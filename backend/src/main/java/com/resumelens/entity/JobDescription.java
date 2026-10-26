@@ -12,7 +12,7 @@ public class JobDescription {
 
     private String title;
 
-    @Column(nullable = false, columnDefinition = "LONGTEXT")
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
     // Comma-separated list; no separate join table needed for current scope

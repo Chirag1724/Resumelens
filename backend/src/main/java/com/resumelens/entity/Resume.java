@@ -22,7 +22,7 @@ public class Resume {
 
     private String fileName;
 
-    @Column(nullable = false, columnDefinition = "LONGTEXT")
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String rawText;
 
     @Column(nullable = false, updatable = false)
@@ -34,6 +34,9 @@ public class Resume {
 
     @Column(nullable = false)
     private boolean hasGraphicsRisk = false;
+
+    @Column(nullable = false)
+    private boolean hasFormattingRisk = false;
 
     @PrePersist
     void prePersist() {
@@ -48,16 +51,21 @@ public class Resume {
     protected Resume() {}
 
     public Resume(User user, String fileName, String rawText, String targetRole, Integer experienceYears) {
-        this(user, fileName, rawText, targetRole, experienceYears, false);
+        this(user, fileName, rawText, targetRole, experienceYears, false, false);
     }
 
     public Resume(User user, String fileName, String rawText, String targetRole, Integer experienceYears, boolean hasGraphicsRisk) {
+        this(user, fileName, rawText, targetRole, experienceYears, hasGraphicsRisk, false);
+    }
+
+    public Resume(User user, String fileName, String rawText, String targetRole, Integer experienceYears, boolean hasGraphicsRisk, boolean hasFormattingRisk) {
         this.user = user;
         this.fileName = fileName;
         this.rawText = rawText;
         this.targetRole = targetRole;
         this.experienceYears = experienceYears;
         this.hasGraphicsRisk = hasGraphicsRisk;
+        this.hasFormattingRisk = hasFormattingRisk;
     }
 
     public Long getId() { return id; }
@@ -76,4 +84,7 @@ public class Resume {
     public boolean hasGraphicsRisk() { return hasGraphicsRisk; }
     public boolean isHasGraphicsRisk() { return hasGraphicsRisk; }
     public void setHasGraphicsRisk(boolean hasGraphicsRisk) { this.hasGraphicsRisk = hasGraphicsRisk; }
+    public boolean hasFormattingRisk() { return hasFormattingRisk; }
+    public boolean isHasFormattingRisk() { return hasFormattingRisk; }
+    public void setHasFormattingRisk(boolean hasFormattingRisk) { this.hasFormattingRisk = hasFormattingRisk; }
 }
