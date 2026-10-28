@@ -55,6 +55,14 @@ Mapped centrally by `GlobalExceptionHandler`:
 | **422 Unprocessable Entity** | `ResumeParseException` | File is corrupted or text layer cannot be parsed. |
 | **500 Internal Server Error** | `Exception` / `ReportGenerationException` | Unhandled server exception or PDF rendering failure. (Stack traces are never exposed). |
 
+### 1.5 Cross-Origin Resource Sharing (CORS)
+- Allowed origins are configured via the `CORS_ALLOWED_ORIGINS` environment variable (comma-separated list, whitespace trimmed).
+- Defaults to `http://localhost:5173` if unset. Wildcard origins are rejected.
+- Allowed HTTP methods: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`.
+- Allowed headers: `*`.
+- `Allow-Credentials`: `true`.
+- Requests from disallowed origins receive `403 Forbidden` on both preflight (`OPTIONS`) and actual requests to `/api/**`.
+
 ---
 
 ## 2. Authentication Endpoints (`/api/v1/auth`)
@@ -222,6 +230,10 @@ All analysis and report retrieval endpoints use unguessable UUIDs as public capa
   "message": "OK",
   "data": {
     "id": "e2a394c8-3c4a-4467-8ef0-9bb499b70b4a",
+    "fileName": "resume.pdf",
+    "analyzedAt": "2026-10-26T14:30:00.123456",
+    "targetRole": "Senior Java Developer",
+    "experienceYears": 5,
     "overallScore": 78.45,
     "statusLabel": "Strong Match",
     "atsScore": 82.0,
@@ -312,6 +324,10 @@ All analysis and report retrieval endpoints use unguessable UUIDs as public capa
 | Field | Type | Range / Format | Description |
 |:---|:---|:---|:---|
 | `id` | `UUID (String)` | UUID string | Unique unguessable capability identifier of this match result |
+| `fileName` | `String` | Text | Original file name of the analyzed resume |
+| `analyzedAt` | `LocalDateTime (ISO-8601)` | Timestamp | Timestamp when the analysis was performed |
+| `targetRole` | `String` | Text / `null` | Target role provided during upload (`null` when absent) |
+| `experienceYears` | `Integer` | Integer / `null` | Candidate experience in years provided during upload (`null` when absent) |
 | `overallScore` | `Double` | `0.00` - `100.00` | Weighted aggregate score |
 | `statusLabel` | `String` | `"Excellent Match"` \| `"Strong Match"` \| `"Moderate Match"` \| `"Weak Match"` \| `"Poor Match"` | Qualitative score tier |
 | `atsScore` | `Double` | `0.0` - `100.0` | ATS formatting dimension score (25%) |
@@ -352,7 +368,7 @@ All analysis and report retrieval endpoints use unguessable UUIDs as public capa
 | `id` | `UUID (String)` | Yes | Public capability UUID of the match result to fetch |
 
 #### Success Response (`200 OK`)
-Returns `ApiResponse<AnalysisResponse>` with identical structure and contents as `POST /api/v1/analysis/match` (suggestions and risks are deterministically recomputed from the persisted resume and job description).
+Returns `ApiResponse<AnalysisResponse>` with identical structure and contents as `POST /api/v1/analysis/match` (metadata fields `fileName`, `analyzedAt`, `targetRole`, and `experienceYears` return identical values; suggestions and risks are deterministically recomputed from the persisted resume and job description).
 
 #### Error Status Codes
 - `400 Bad Request`: Invalid UUID format.

@@ -30,15 +30,15 @@ ResumeLens accepts a resume (PDF or plain text) and a job description, then prod
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | React 18 + Vite, plain CSS |
-| Backend | Spring Boot (Java 17+), Spring Data JPA |
-| Database | PostgreSQL 15+ (hosted on Supabase) |
-| Authentication | JWT via Spring Security |
-| PDF parsing | Apache PDFBox |
-| DOCX parsing | Apache POI |
-| Report generation | iText (PDF export) |
+| Layer             | Technology                              |
+| ----------------- | --------------------------------------- |
+| Frontend          | React 18 + Vite, plain CSS              |
+| Backend           | Spring Boot (Java 17+), Spring Data JPA |
+| Database          | PostgreSQL 15+ (hosted on Supabase)     |
+| Authentication    | JWT via Spring Security                 |
+| PDF parsing       | Apache PDFBox                           |
+| DOCX parsing      | Apache POI                              |
+| Report generation | iText (PDF export)                      |
 
 ---
 
@@ -79,7 +79,6 @@ docs/       Architecture documentation, scoring rules, conventions, and decision
 
    ```bash
    git clone https://github.com/Chirag1724/Resumelens.git
-   cd Resumelens
    ```
 
 2. Create a PostgreSQL database.
@@ -108,6 +107,8 @@ docs/       Architecture documentation, scoring rules, conventions, and decision
    export DB_USERNAME=postgres
    export DB_PASSWORD=your_postgres_password
    export JWT_SECRET=your_long_random_secret_here
+   # Optional: allowed CORS origins (comma-separated, defaults to http://localhost:5173)
+   export CORS_ALLOWED_ORIGINS=http://localhost:5173
    ```
 
    **Shell (Linux / macOS / Git Bash) — Supabase Session pooler:**
@@ -116,14 +117,18 @@ docs/       Architecture documentation, scoring rules, conventions, and decision
    export DB_USERNAME=postgres.YOUR_PROJECT_REF
    export DB_PASSWORD=your_database_password
    export JWT_SECRET=your_long_random_secret_here
+   # Optional: allowed CORS origins (comma-separated, defaults to http://localhost:5173)
+   export CORS_ALLOWED_ORIGINS=http://localhost:5173
    ```
 
    **PowerShell (Windows) — local PostgreSQL:**
    ```powershell
-   $env:DB_URL      = "jdbc:postgresql://localhost:5432/resumelens"
-   $env:DB_USERNAME = "postgres"
-   $env:DB_PASSWORD = "your_postgres_password"
-   $env:JWT_SECRET  = "your_long_random_secret_here"
+   $env:DB_URL               = "jdbc:postgresql://localhost:5432/resumelens"
+   $env:DB_USERNAME          = "postgres"
+   $env:DB_PASSWORD          = "your_postgres_password"
+   $env:JWT_SECRET           = "your_long_random_secret_here"
+   # Optional: allowed CORS origins (comma-separated, defaults to http://localhost:5173)
+   $env:CORS_ALLOWED_ORIGINS = "http://localhost:5173"
    ```
 
    **IntelliJ IDEA:** Run → Edit Configurations → your Spring Boot config → Environment Variables.
@@ -153,7 +158,35 @@ docs/       Architecture documentation, scoring rules, conventions, and decision
 
 ### Frontend Setup
 
-Coming soon.
+1. Ensure the backend API is running with its environment variables configured, including `CORS_ALLOWED_ORIGINS` permitting `http://localhost:5173` (the default origin).
+
+2. Navigate to the frontend directory:
+
+   ```bash
+   cd frontend
+   ```
+
+3. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+4. Set up the frontend environment configuration:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   The default `.env` points `VITE_API_BASE_URL` to the backend REST endpoint (`http://localhost:8080`).
+
+5. Start the frontend development server:
+
+   ```bash
+   npm run dev
+   ```
+
+   The single-page application will be accessible at `http://localhost:5173`.
 
 ---
 

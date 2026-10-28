@@ -1,130 +1,221 @@
 # REQUIREMENTS.md
-> **Product and technical requirements specification for ResumeLens.**
+> Product and technical requirements specification for ResumeLens.
 > Authoritative scope, feature prioritisation, and acceptance criteria.
 > Linked to [API_CONTRACT.md](file:///c:/Users/LENOVO/Desktop/Resumelens/docs/API_CONTRACT.md), [SCORING_RULES.md](file:///c:/Users/LENOVO/Desktop/Resumelens/docs/SCORING_RULES.md), and [FRONTEND_DESIGN.md](file:///c:/Users/LENOVO/Desktop/Resumelens/docs/FRONTEND_DESIGN.md).
 
 ---
 
-## 1. Product Mission & Scope
+## 1. Product Mission and Scope
 
-ResumeLens provides job-seekers with an objective, fast, and transparent evaluation of their resume against target job descriptions. The system identifies ATS formatting bottlenecks, analyzes technical skill overlap, detects unquantified impact bullets, and produces copyable AI-ready LaTeX prompts without charging fees or relying on third-party AI APIs.
+ResumeLens provides job-seekers with an objective, fast, and transparent evaluation of their resume against target job descriptions. The system identifies ATS formatting bottlenecks, analyzes technical skill overlap, detects unquantified impact bullets, and produces copyable AI-ready improvement prompts without charging fees or relying on third-party AI APIs.
 
 ### 1.1 User Personas
-1. **Guest Job-Seeker (Primary):** Wants immediate feedback on a resume for a specific job application without the friction of signing up or disclosing personal identity.
-2. **Registered Job-Seeker (Secondary):** Wants to track score improvements across iterations, compare matches for different roles, and maintain a longitudinal history.
+1. **Guest Job-Seeker (Primary)**: Wants immediate feedback on a resume for a specific job application without the friction of signing up or disclosing personal identity.
+2. **Registered Job-Seeker (Secondary)**: Wants to track score progression across iterations, compare matches for different roles, and maintain a history.
 
 ---
 
 ## 2. Functional Requirements
 
-### 2.1 Must-Have Requirements (Core Scope)
+### 2.1 Core Scope
 
 #### FR-1: Frictionless Guest Flow
-- The application must allow users to upload resumes, enter job descriptions, and view comprehensive score results completely anonymously.
-- No feature on the analysis or report page shall be locked behind authentication.
-- A user can optionally create an account or sign in at any point.
+- The application allows users to upload resumes, enter job descriptions, and view comprehensive score results completely anonymously.
+- No feature on the analysis or report page is locked behind authentication.
+- Authentication only unlocks result history persistence.
+- A user can optionally register or log in at any point.
 
-#### FR-2: Document Ingestion & Parsing
-- The system must accept resume uploads in **PDF** (`.pdf`) and **Microsoft Word** (`.docx`) formats.
-- The system must extract clean text layers using Apache PDFBox (PDF) and Apache POI (DOCX).
-- Maximum allowed file size is strictly **10 MB**. Files exceeding this limit or presenting unsupported MIME types must be rejected with user-friendly error messages (HTTP 400 / 415).
-- If a PDF contains no extractable text layer (scanned bitmap/image), the system must flag an unparseable document error (HTTP 422).
+#### FR-2: Document Ingestion and Parsing
+- The system accepts resume uploads in PDF (`.pdf`) and Microsoft Word (`.docx`) formats.
+- The system extracts clean text layers using Apache PDFBox (PDF) and Apache POI (DOCX).
+- Maximum allowed file size is strictly 10 MB. Files exceeding this limit or presenting unsupported file signatures are rejected with clear error messages (HTTP 413, HTTP 415).
+- If a document contains no extractable text layer (such as a scanned image PDF), the upload is rejected with HTTP 422 (ResumeParseException) and no score is produced.
 
 #### FR-3: Six-Dimension Score Calculation
-The system must calculate and return scores (0.00 – 100.00) across six discrete dimensions strictly weighted as defined in [SCORING_RULES.md](file:///c:/Users/LENOVO/Desktop/Resumelens/docs/SCORING_RULES.md):
-1. **ATS Compatibility (25%):** Penalties for missing standard headers (Education, Experience, Skills), absent contact info, tables/columns, graphics, and low keyword density.
-2. **Skills Validation (25%):** TF-IDF top keyword extraction from the JD, exact matching, Levenshtein fuzzy distance matching (distance ≤ 2), and Cosine Similarity bonus vector calculations.
-3. **Impact & Achievements (20%):** Ratio of bullet points containing numeric metrics, percentages, and strong action verbs.
-4. **Project Quality (15%):** Assessment of project sections for titles, tech stack mentions, descriptions, and measurable outcomes.
-5. **Writing Quality (10%):** Sentence length analysis, passive voice ratio, first-person pronoun detection, and filler word deductions.
-6. **Professionalism (5%):** Page length estimation (> 2 pages penalized), date formatting consistency, bullet style uniformity, and email address professionalism.
-- Overall score must be an exact weighted combination rounded to two decimal places.
-- Qualitative status labels must be assigned by exact thresholds:
-  - `≥ 85.00`: **Excellent Match**
-  - `70.00 – 84.99`: **Strong Match**
-  - `55.00 – 69.99`: **Moderate Match**
-  - `40.00 – 54.99`: **Weak Match**
-  - `< 40.00`: **Poor Match**
+The system calculates scores (0.00 to 100.00) across six discrete dimensions strictly weighted as configured in [SCORING_RULES.md](file:///c:/Users/LENOVO/Desktop/Resumelens/docs/SCORING_RULES.md):
+1. **ATS Compatibility (25%)**: Evaluates standard section headings, contact info presence, single-column formatting, absence of graphics, and keyword density.
+2. **Skills Validation (25%)**: TF-IDF keyword extraction from the job description, exact matching, Levenshtein fuzzy distance matching (distance <= 2), and Cosine Similarity bonus calculations.
+3. **Impact & Achievements (20%)**: Proportion of bullet points containing numeric metrics, percentages, and strong action verbs.
+4. **Project Quality (15%)**: Assessment of project sections for titles, tech stack mentions, descriptions, and measurable outcomes.
+5. **Writing Quality (10%)**: Sentence length analysis, passive voice ratio, first-person pronoun detection, filler words, and vocabulary repetition.
+6. **Professionalism (5%)**: Page length estimation (> 2 pages penalized), date formatting consistency, bullet style uniformity, spelling check, and email address professionalism.
 
-#### FR-4: Keyword Analysis & Missing Skills
-- The system must display all extracted keywords from the JD.
-- Keywords must be classified into:
-  - **Matched Skills:** Present in resume via exact or fuzzy match.
-  - **Missing Skills:** Absent from resume; prioritized for resume revision.
-- Overall keyword match percentage must be displayed.
+- Overall score is the exact weighted average rounded to two decimal places.
+- Qualitative score tier labels are assigned strictly by the canonical thresholds (85, 70, 55, 40):
+  - `>= 85.00`: **EXCELLENT** (token: `--success` `#00a46d`, label: `"Excellent Match"`)
+  - `70.00 to 84.99`: **STRONG** (token: `#6fcf97`, label: `"Strong Match"`)
+  - `55.00 to 69.99`: **MODERATE** (token: `--warning` `#fbc904`, label: `"Moderate Match"`)
+  - `40.00 to 54.99`: **WEAK** (token: `--accent-orange` `#ff9b00`, label: `"Weak Match"`)
+  - `< 40.00`: **POOR** (token: `--danger` `#ef4444`, label: `"Poor Match"`)
+- Score tiers are always presented with their text tier label.
 
-#### FR-5: ATS Risk Detection
-- The system must identify and highlight specific ATS failure risks:
-  - Missing essential headings (Education, Experience, Skills).
-  - Missing contact details (email or phone).
-  - Layout risks (multi-column layouts, tables).
-  - Graphic risks (images, non-standard embedded elements).
-  - Resume length overflow (> 2 pages / > 700 words).
+#### FR-4: Keyword Analysis
+- Extracted skills from the job description are classified into:
+  - **Matched Skills**: Present in resume via exact or fuzzy match (green-tinted pills).
+  - **Missing Skills**: Absent from resume (orange-tinted pills).
+- Skills are displayed as pill badges without individual percentage numbers.
 
-#### FR-6: Actionable Recommendations
-- The system must generate prioritized recommendations (`HIGH`, `MEDIUM`, `LOW`):
-  - Missing critical keywords.
-  - Action verb replacements for detected weak verbs.
+#### FR-5: Scoring Risks Detection
+- System returns deductions incurred across scoring rules with attributes: title, severity (`HIGH`, `MEDIUM`, `LOW`), description, and actionable fix.
+- Severity colors:
+  - **HIGH**: `#ef4444` (deduction >= 15 points)
+  - **MEDIUM**: `#fbc904` (deduction 8 to 14 points)
+  - **LOW**: `#999999` (deduction < 8 points)
+- Clean resumes produce an empty risks list.
+- Risks are presented in an expandable panel with severity badge, description, and concrete fix.
+
+#### FR-6: Actionable Suggestions
+- System generates prioritized recommendations (`HIGH`, `MEDIUM`, `LOW` priority):
+  - Missing keywords.
+  - Action verb replacements for weak phrasing.
   - Unquantified bullets requiring metrics or percentages.
+- Displayed as a horizontal row of cards containing priority badge, title, description, and concrete example.
 
-#### FR-7: Copyable AI Fix-Prompt Generation
-- The system must generate a structured, copyable prompt designed for pasting into external LLMs (ChatGPT, Claude, Gemini).
-- The prompt must include:
-  - Target job title.
-  - Full candidate resume text and target JD text.
-  - Missing keywords and weak verbs to replace.
-  - Strict anti-fabrication guidelines (no hallucinated dates, companies, or fake metrics).
-  - LaTeX template formatting instruction (`Simple Single-Column`, `Modern Clean`, or `Compact Academic`).
-- The frontend must provide a one-click copy button with clipboard confirmation.
+#### FR-7: Copyable Improvement Prompt Generation
+- System generates a structured, copyable text prompt for pasting into an external AI assistant.
+- The prompt includes:
+  - Job title detected from the job description.
+  - Missing keywords.
+  - Weakest scoring sections and feedback.
+  - Anti-fabrication instructions.
+- Assembled entirely via server-side string concatenation with no external AI API dependency.
+- Accessible via a modal dialog with focus trap, Escape key dismissal, aria-modal accessibility, and a one-click copy button with confirmation tooltip.
 
 #### FR-8: Downloadable PDF Analysis Report
-- The system must allow users to download an official PDF report via `GET /api/v1/analysis/{matchResultId}/report`.
-- The PDF must be generated server-side using iText 8 with clean typography, dimension breakdown table, matched/missing keyword summaries, and overall score badges.
+- Users can download an official PDF report via `GET /api/v1/analysis/{id}/report`.
+- Server-side PDF generation using clean typography, score tier indicators, section breakdown, and risk summaries.
 
 ---
 
-### 2.2 Optional Requirements (Authenticated Scope)
+## 3. Frontend Page Specifications
 
-#### FR-9: User Authentication & Account Management
-- Registration (`POST /api/v1/auth/register`) with email, password (min 8 chars), and name.
-- Authentication (`POST /api/v1/auth/login`) issuing stateless JWT tokens with 24-hour expiration.
-- Auto-linking of uploads to authenticated user when Bearer token is present.
+Page structure, design tokens, and interactions match [FRONTEND_DESIGN.md](file:///c:/Users/LENOVO/Desktop/Resumelens/docs/FRONTEND_DESIGN.md) exactly.
 
-#### FR-10: Analysis History & Longitudinal Tracking
-- Authenticated endpoint `GET /api/v1/history` returning all previous analyses for the logged-in user in descending chronological order.
-- History dashboard page displaying past submissions, target job titles, dates, and scores.
-- Re-opening any historical report via direct link.
+### 3.1 Global Navigation
+- Floating pill bar centered at top of page with background `var(--bg-card)` and border `1px solid var(--border)`.
+- Left: Wordmark `ResumeLens` with small SVG mark (document with magnifier).
+- Center: Links for `Home` (`/`), `History` (`/history`), and `Login` (`/login`).
+- Right: `Login` link when logged out, or user email with `Logout` button when logged in.
+- Unauthenticated access to `History` redirects to `/login`.
+- Mobile viewport: Links collapse into a menu button.
 
-#### FR-11: Score Trend Visualization
-- Interactive graphical visualization showing historical score progression over successive resume revisions for authenticated users.
+### 3.2 Landing Page (`/`)
+- **Hero Section (Two Columns)**:
+  - Left column:
+    - Pill with spark icon and text: `"Explainable scoring"`.
+    - Heading: `"See your resume the way an ATS does"`.
+    - Body text: `"Upload your resume and a job description. Get a transparent score, the keywords you are missing and specific fixes in seconds."`.
+    - Three badges: `"Results in seconds"`, `"File is not stored, only extracted text"`, `"Every score explained"`.
+  - Right column (Upload Zone):
+    - Card with dashed `var(--brand-500)` border, radius 30px.
+    - `PdfIcon` (document with folded corner and sparkle).
+    - Text: `"Drag and drop your resume here"`, `"or click to browse"`.
+    - Button: `"Choose file"`.
+    - Label: `"PDF or DOCX, up to 10 MB"`.
+    - State after file chosen: File chip with remove button, optional Target role input, optional Years of experience input, required Job description textarea, and `"Analyze resume"` button.
+    - State while analyzing: Displays `DocumentMockup` with continuous `ScanLine` animation and progression indicators `"Uploading"` then `"Analyzing"`.
+- **Sample Report Section**:
+  - Left: `DocumentMockup` component.
+  - Right: Card labeled `"Sample report, not your data"` with `ScoreGauge` showing 77, label `"Strong Match"`, four checks (`"Clear section order"`, `"No critical errors"`, `"Readable by parsers"`, `"Keywords aligned"`), and keyword match bar at 85 percent (`"Matched 34 of 40 keywords"`).
+- **How Your Score Is Built Section**:
+  - Six chips displaying exact category names and weights from `docs/SCORING_RULES.md`:
+    1. ATS Compatibility (25%)
+    2. Skills Validation (25%)
+    3. Impact & Achievements (20%)
+    4. Project Quality (15%)
+    5. Writing Quality (10%)
+    6. Professionalism (5%)
+- **Features Section (Three Cards)**:
+  1. `"Instant analysis"`: `"Scoring runs in seconds, with a clear breakdown by category."`
+  2. `"Typo tolerant keywords"`: `"Spelling and formatting variations still count as a match."`
+  3. `"Specific fixes"`: `"Every risk comes with a fix, and every suggestion with an example."`
+- **How It Works Section (Three Numbered Steps)**:
+  1. `Upload your resume`
+  2. `Add the job description`
+  3. `Review your report`
+- **Footer**:
+  - Text: `"ResumeLens. Scores are rule based estimates and do not guarantee any ATS result."`
+  - No fake user counts, testimonials, or fabricated statistics.
+
+### 3.3 Report Page (`/report/:id`)
+Structured in exact sequential order:
+1. **Top Row**:
+   - `ScoreGauge` card with overall score and tier label.
+   - File info card with file name, scan date, target role, and years of experience (missing optional values hidden).
+2. **Quick Insights (Four Cards from API Data Only)**:
+   - Overall score tier.
+   - Keywords matched versus total, with missing count.
+   - High and medium risk counts.
+   - Weakest section name and score.
+3. **Summary Card**:
+   - Fixed sentence template: `"Your resume scored {score} out of 100, rated {tier}. Strongest area: {name} ({score}). Weakest area: {name} ({score}). {n} high severity risks and {m} missing keywords were found."`
+   - Singular and plural handling for risk and missing keyword counts.
+   - When `{n}` is 0, the phrase becomes: `"No high severity risks were found."`.
+4. **Strengths and Improvements**:
+   - Strengths: Categories scoring `STRONG` or `EXCELLENT`, listed with section name and score.
+   - Improvements: Categories scoring `WEAK` or `POOR`, listed with section name and score.
+5. **Six Section Bars**:
+   - Horizontal progress bars for each dimension with score, weight, status pill, and feedback.
+6. **Six Detail Cards**:
+   - Card for each dimension with icon, score out of 100, tier label, thin progress bar, and one short fixed sentence describing what the category measures.
+7. **Risks and Keyword Analysis**:
+   - Side-by-side layout: expandable Risks on left (severity badge, description, fix); Keyword analysis on right (matched and missing skill pills, no percentages).
+8. **Top Suggestions**:
+   - Horizontal row of suggestion cards (priority badge, title, description, example).
+9. **Re-analyze Card**:
+   - Bottom card with text `"Updated your resume? Scan it again."` and a `"Re-analyze"` button linking to `/`.
+10. **Action Buttons**:
+    - `"Download PDF report"`
+    - `"Generate fix prompt"`
+    - `"Copy link"` with helper text: `"anyone with the link can view this report"`.
+
+#### Features Deliberately Excluded (No Backend API Data)
+- Resume document preview canvas or iframe.
+- Written AI text summaries or unstructured prose.
+- Letter grades (A, B, C, D, F).
+- Parse rate metrics.
+- Recruiter match percentages.
+- Sparkline micro-charts.
+- Individual per-keyword percentage match metrics.
+
+### 3.4 History Page (`/history`)
+- Available to logged-in users only.
+- Historical cards displaying scan date, file name, target role, and score with tier label.
+- Overall score over time line chart (hidden until 2 or more historical scan entries exist).
+- Empty state with direct link to upload page when no scans are present.
 
 ---
 
-## 3. Non-Functional Requirements (NFR)
+## 4. Design System and Token Compliance
 
-### 3.1 Performance & Latency
-- **Analysis Execution Time:** End-to-end resume parsing, TF-IDF calculation, and scoring must complete in `< 3.0 seconds` for a standard 2-page document.
-- **Report Generation:** Server-side PDF generation must complete in `< 1.5 seconds`.
-- **Frontend Load Time:** Initial Vite SPA bundle load under `< 1.0 second` on broadband connections.
+- **Surface Tokens**: `--bg-page: #0a0a0a;`, `--bg-card: #111111;`, `--bg-elevated: #181818;`, `--border: rgba(255, 255, 255, 0.08);`, `--border-strong: rgba(255, 255, 255, 0.16);`
+- **Typography Colors**: `--text: #ffffff;`, `--text-secondary: #b0b0b0;`, `--text-tertiary: #999999;`, `--on-brand: #0a0a0a;`
+- **Brand Ramp**: `--brand-50` through `--brand-950` (`--brand-400: #f0784d;`, `--brand-500: #e8602e;`, `--brand-600: #c14315;`)
+- **Status Colors**: `--success: #00a46d;`, `--warning: #fbc904;`, `--accent-orange: #ff9b00;`, `--info: #278cff;`, `--danger: #ef4444;`. No other colors. No purple.
+- **Typography Scale**: Headings in Manrope (500, 600, 700, 800), body in Inter (400, 500, 600), monospace in system monospace stack. Base 14px, small 12px, micro labels 11px uppercase with 0.08em letter spacing. Hero heading `clamp(2.5rem, 6vw, 5.75rem)` weight 800 line height 1. Section headings 22 to 28px weight 700. Gauge number 48px weight 800. Sentence case everywhere except micro labels.
+- **Shape and Radii**: 4px grid. Radii: 6px small elements, 9px buttons and inputs, 12px cards, 18px large panels, 30px upload zone, 9999px fully rounded pills and badges. No other radii.
+- **Glows**: Card hover `0 0 30px rgba(232, 96, 46, 0.10)`, upload zone `0 0 40px rgba(232, 96, 46, 0.15)` plus inset `0 0 20px rgba(232, 96, 46, 0.05)`, primary button hover `0 0 50px rgba(232, 96, 46, 0.20)`, floating panels `0 40px 80px rgba(0, 0, 0, 0.40)`.
+- **Motion**: 150ms ease for standard transitions, 300ms for hover lifts and bar fills, 500ms for gauge ring fill, ScanLine 2.4s linear infinite. All motion disabled under `prefers-reduced-motion`.
 
-### 3.2 File Constraints
-- **Supported File Types:** `.pdf` and `.docx` only. All other extensions (`.txt`, `.rtf`, `.png`, `.jpg`) must be rejected at both client and server boundaries.
-- **File Size Limit:** Strict ceiling of **10 MB**.
+---
 
-### 3.3 Browser Compatibility
-- Modern evergreen desktop and mobile browsers:
-  - Google Chrome (latest 2 versions)
-  - Mozilla Firefox (latest 2 versions)
-  - Apple Safari (latest 2 versions)
-  - Microsoft Edge (latest 2 versions)
-- Responsive design adapting smoothly down to 375px mobile viewports.
+## 5. Non-Functional Requirements
 
-### 3.4 Security & Data Privacy
-- **Stateless Authentication:** JWT signed with HMAC-SHA256, verified on each request.
-- **Password Hashing:** Passwords hashed using standard BCrypt with salt rounds ≥ 10.
-- **Zero Information Leakage:** Stack traces and internal database errors are swallowed by `GlobalExceptionHandler` and replaced with standard messages.
-- **No Third-Party AI Data Sharing:** Resume text is never dispatched to any external cloud AI provider.
+### 5.1 Performance and Latency
+- Analysis execution under 3.0 seconds for standard two-page resumes.
+- Server-side PDF report compilation under 1.5 seconds.
+- Single page application initial load under 1.0 second.
 
-### 3.5 Architectural Constraints
-- **No Paid API Dependency:** All algorithms (TF-IDF, Levenshtein, Cosine Similarity) are implemented natively in Java.
-- **Database Portability:** Managed with Flyway migrations on PostgreSQL 15 (Supabase); compatible with H2 in-memory test profiles.
+### 5.2 Accessibility and States
+- Every interactive element supports default, hover, focus-visible (`2px solid var(--brand-400)` with 2px offset), active, and disabled states.
+- Color is never the sole indicator of meaning: all status indicators pair color with explicit text labels.
+- Loading skeletons, empty states, and error alerts implemented across all routes.
+- Modals implement focus trapping, `Escape` key close, and `aria-modal="true"`.
+- Semantic labels present on all inputs.
+- Responsive layout verified across viewports from 360px up to 1440px widths.
+
+### 5.3 Security and Privacy
+- Guest capability URLs utilize unguessable UUIDs (`/report/:id`).
+- Stateless JWT authentication for user accounts.
+- Password hashing with BCrypt (salt rounds >= 10).
+- Zero third-party AI API exposure: resume data is analyzed locally on the server and is never sent to external AI providers.

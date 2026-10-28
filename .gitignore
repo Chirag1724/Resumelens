@@ -59,6 +59,8 @@ spotbugsXml.xml
 # Maven wrapper metadata (keep the wrapper scripts, ignore local state)
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
+backend/run.ps1
+
 
 
 # REACT / NODE / VITE  (frontend/)

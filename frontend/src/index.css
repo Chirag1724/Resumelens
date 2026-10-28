@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+:root {
+  --bg-page: #0a0a0a;
+  --bg-card: #111111;
+  --bg-elevated: #181818;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  --text: #ffffff;
+  --text-secondary: #b0b0b0;
+  --text-tertiary: #999999;
+  --on-brand: #0a0a0a;
+
+  --brand-50: #fdf5f2;
+  --brand-100: #fbebe5;
+  --brand-200: #f5cfc2;
+  --brand-300: #f3ab91;
+  --brand-400: #f0784d;
+  --brand-500: #e8602e;
+  --brand-600: #c14315;
+  --brand-700: #9c3611;
+  --brand-800: #77290d;
+  --brand-900: #562310;
+  --brand-950: #38170b;
+
+  --success: #00a46d;
+  --warning: #fbc904;
+  --accent-orange: #ff9b00;
+  --info: #278cff;
+  --danger: #ef4444;
+
+  --score-excellent: #00a46d;
+  --score-strong: #6fcf97;
+  --score-moderate: #fbc904;
+  --score-weak: #ff9b00;
+  --score-poor: #ef4444;
+
+  --risk-high: #ef4444;
+  --risk-medium: #fbc904;
+  --risk-low: #999999;
+
+  --font-heading: 'Manrope', -apple-system, sans-serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 9px;
+  --radius-lg: 12px;
+  --radius-xl: 18px;
+  --radius-2xl: 30px;
+  --radius-full: 9999px;
+
+  --shadow-card-hover: 0 0 30px rgba(232, 96, 46, 0.10);
+  --shadow-active-glow: 0 0 40px rgba(232, 96, 46, 0.15), inset 0 0 20px rgba(232, 96, 46, 0.05);
+  --shadow-primary-hover: 0 0 50px rgba(232, 96, 46, 0.20);
+  --shadow-floating: 0 40px 80px rgba(0, 0, 0, 0.40);
+}
+
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+html {
+  font-size: 14px;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-page);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+@keyframes scanline-traverse {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

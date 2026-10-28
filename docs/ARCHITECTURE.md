@@ -45,23 +45,52 @@ All three are Apache-licensed or AGPL (iText Community) with no paid-API require
 
 ## Frontend Structure
 
-**Technology:** React 18 + Vite + plain CSS (no Tailwind unless explicitly re-scoped)
+**Technology:** React 18 + Vite + Tailwind CSS v4 + Axios + Recharts + Lucide React
 
 ```
 frontend/
-├── public/
-├── src/
-│   ├── api/               # Axios instance + per-feature API call modules
-│   ├── assets/            # Static images, icons
-│   ├── components/        # Reusable UI components (Button, Card, ScoreRing, etc.)
-│   ├── pages/             # Page-level components (Home, Analyze, Results, History, Auth)
-│   ├── hooks/             # Custom React hooks
-│   ├── store/             # Lightweight state (Context API or Zustand — no Redux)
-│   ├── utils/             # Pure helper functions (formatters, validators)
-│   ├── App.jsx
-│   └── main.jsx
 ├── index.html
-└── vite.config.js
+├── package.json
+├── vite.config.js
+├── .env.example
+└── src/
+    ├── main.jsx                     # Application entry point mounting to DOM
+    ├── App.jsx                      # Navigation bar, route configuration, and protected routes
+    ├── index.css                    # Design system tokens, typography imports, and utilities
+    ├── api/
+    │   └── client.js                # Axios client with interceptors, auth token handling, and endpoints
+    ├── components/
+    │   ├── CtaCard.jsx              # Re-analyze call-to-action card linking back to home
+    │   ├── DocumentMockup.jsx       # CSS-rendered resume document mockup with scanline animation
+    │   ├── DropZone.jsx             # File upload zone with drag-and-drop, validation, and intake form
+    │   ├── ErrorBoundary.jsx        # Component error boundary with recovery UI
+    │   ├── FeatureCard.jsx          # Feature showcase card with icon container
+    │   ├── FixPromptModal.jsx       # Modal for generating and copying AI resume improvement prompts
+    │   ├── HistoryCard.jsx          # Past evaluation card linking to /report/:id
+    │   ├── InfoCard.jsx             # Resume metadata panel showing file name, date, role, experience
+    │   ├── InsightCard.jsx          # Quick metric card for scores, risks, keywords, and dimensions
+    │   ├── KeywordPill.jsx          # Matched and missing keyword pills
+    │   ├── PageBackground.jsx       # Three-layer background with dot grid, radial glow, and hairlines
+    │   ├── PdfIcon.jsx              # Inline SVG document icon with folded corner
+    │   ├── RiskCard.jsx             # Expandable compliance deduction card with severity badge and fix
+    │   ├── ScoreGauge.jsx           # Circular SVG gauge with animated score fill and tier label
+    │   ├── SectionDetailCard.jsx    # Dimension detail card with category score and explanation
+    │   ├── SectionScoreBar.jsx      # Horizontal dimension score bar with weight and feedback
+    │   ├── StepCard.jsx             # Numbered step card for How It Works section
+    │   ├── SuggestionCard.jsx       # Actionable improvement card with priority badge and example
+    │   ├── SummaryCard.jsx          # Deterministic analysis summary sentence card
+    │   └── WeightsStrip.jsx         # Dimension weight pills matching SCORING_RULES.md
+    ├── context/
+    │   └── AuthContext.jsx          # In-memory authentication state and session management
+    ├── lib/
+    │   ├── score.js                 # Canonical score tier boundaries (85, 70, 55, 40) and tokens
+    │   └── scoring.js               # Dimension definitions, weights, and descriptions
+    └── pages/
+        ├── HistoryPage.jsx          # Protected evaluation history with score progression chart
+        ├── LandingPage.jsx          # Landing page with hero intake, sample report, and features
+        ├── LoginPage.jsx            # Account login and registration forms
+        ├── Placeholders.jsx         # Fallback placeholder views including NotFoundPage
+        └── ReportPage.jsx           # Analysis report view with full breakdown and actions
 ```
 
 ---
@@ -80,7 +109,7 @@ backend/
     │   └── TfIdfCalculator.java            # TF-IDF term weighting
     │
     ├── config/                             # Spring configuration classes
-    │   └── CorsConfig.java
+    │   └── CorsConfig.java                 # Configurable CORS filter (CORS_ALLOWED_ORIGINS)
     │
     ├── controller/                         # HTTP layer only - no business logic
     │   ├── AnalysisController.java
@@ -94,7 +123,7 @@ backend/
     │   │   ├── AnalysisRequest.java
     │   │   └── AuthRequest.java
     │   └── response/
-    │       ├── AnalysisResponse.java
+    │       ├── AnalysisResponse.java       # Metadata (fileName, analyzedAt, targetRole, experienceYears), scores, suggestions, risks
     │       ├── ApiResponse.java            # Generic wrapper: {success, data, message}
     │       ├── AuthResponse.java
     │       ├── HistoryItemResponse.java
@@ -231,8 +260,8 @@ All endpoints are prefixed: `/api/v1`
 ### Analysis & Reports (`/api/v1/analysis`)
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/v1/analysis/match` | Public (Guest) | Matches resume against JD (`resumeId` + `rawJobDescription`). Returns full 6-dimension score, keywords, and suggestions. |
-| `GET` | `/api/v1/analysis/{matchResultId}` | Public (Guest) | Retrieves previously computed match result by ID. |
+| `POST` | `/api/v1/analysis/match` | Public (Guest) | Matches resume against JD (`resumeId` + `rawJobDescription`). Returns metadata (fileName, analyzedAt, targetRole, experienceYears), 6-dimension score, keywords, suggestions, and risks. |
+| `GET` | `/api/v1/analysis/{matchResultId}` | Public (Guest) | Retrieves previously computed match result by ID with identical metadata, scores, suggestions, and risks. |
 | `GET` | `/api/v1/analysis/{matchResultId}/report` | Public (Guest) | Downloads generated iText PDF analysis report (`application/pdf`). |
 | `GET` | `/api/v1/analysis/{matchResultId}/fix-prompt` | Public (Guest) | Generates copyable LaTeX improvement prompt for external AI assistant. |
 
