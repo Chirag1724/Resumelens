@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.annotation.DirtiesContext;
@@ -323,6 +324,98 @@ class AnalysisControllerIT {
         assertNotNull(postRisks, "POST risks must not be null");
         assertFalse(postRisks.isEmpty(), "POST risks must not be empty for sample resume");
         assertEquals(postRisks, getRisks, "GET risks must equal POST risks for the same result");
+    }
+
+    // Metadata fields match between POST and GET
+
+    @Test
+    void should_returnSameMetadataFieldsInGetAsInPostMatch() throws Exception {
+        // Upload with targetRole and experienceYears
+        MockMultipartFile pdf = new MockMultipartFile(
+                "file", "candidate-resume.pdf", "application/pdf",
+                ResumeControllerIT.buildMinimalPdf());
+
+        String uploadBody = mockMvc.perform(multipart("/api/v1/resumes/upload")
+                .file(pdf)
+                .param("targetRole", "Senior Java Engineer")
+                .param("experienceYears", "7"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String customResumeIdStr = mapper.readTree(uploadBody).path("data").path("resumeId").asText();
+        UUID customResumeId = UUID.fromString(customResumeIdStr);
+
+        // POST /api/v1/analysis/match
+        String matchBody = mockMvc.perform(post("/api/v1/analysis/match")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestData.matchJson(customResumeId, SAMPLE_JD, "Senior Java Engineer")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode postData = mapper.readTree(matchBody).path("data");
+        String idStr = postData.path("id").asText();
+        UUID id = UUID.fromString(idStr);
+
+        // GET /api/v1/analysis/{id}
+        String getBody = mockMvc.perform(get("/api/v1/analysis/{id}", id))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode getData = mapper.readTree(getBody).path("data");
+
+        // Assert 4 fields match between POST and GET and are populated
+        assertEquals(postData.path("fileName").asText(), getData.path("fileName").asText());
+        assertEquals("candidate-resume.pdf", postData.path("fileName").asText());
+
+        assertEquals(postData.path("analyzedAt").asText(), getData.path("analyzedAt").asText());
+        assertFalse(postData.path("analyzedAt").asText().isBlank());
+
+        assertEquals(postData.path("targetRole").asText(), getData.path("targetRole").asText());
+        assertEquals("Senior Java Engineer", postData.path("targetRole").asText());
+
+        assertEquals(postData.path("experienceYears").asInt(), getData.path("experienceYears").asInt());
+        assertEquals(7, postData.path("experienceYears").asInt());
+
+        // Also verify that when absent, targetRole and experienceYears serialize as null
+        String defaultGetBody = mockMvc.perform(get("/api/v1/analysis/{id}", matchResultId))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode defaultData = mapper.readTree(defaultGetBody).path("data");
+        assertTrue(defaultData.path("targetRole").isNull(), "targetRole must serialize as null when absent");
+        assertTrue(defaultData.path("experienceYears").isNull(), "experienceYears must serialize as null when absent");
+    }
+
+    // CORS configuration: default origin allowed, different origin rejected
+
+    @Test
+    void should_allowDefaultOrigin_andRejectDifferentOrigin() throws Exception {
+        // Allowed origin: preflight
+        mockMvc.perform(options("/api/v1/analysis/match")
+                .header(HttpHeaders.ORIGIN, "http://localhost:5173")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:5173"))
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"));
+
+        // Allowed origin: actual request
+        mockMvc.perform(get("/api/v1/analysis/{id}", matchResultId)
+                .header(HttpHeaders.ORIGIN, "http://localhost:5173"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:5173"));
+
+        // Disallowed origin: preflight rejected with 403
+        mockMvc.perform(options("/api/v1/analysis/match")
+                .header(HttpHeaders.ORIGIN, "http://untrusted-domain.com")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
+                .andExpect(status().isForbidden())
+                .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
+
+        // Disallowed origin: actual request rejected with 403
+        mockMvc.perform(get("/api/v1/analysis/{id}", matchResultId)
+                .header(HttpHeaders.ORIGIN, "http://untrusted-domain.com"))
+                .andExpect(status().isForbidden())
+                .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
     }
 }
 

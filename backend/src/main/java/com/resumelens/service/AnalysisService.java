@@ -125,6 +125,10 @@ public class AnalysisService {
 
         return new AnalysisResponse(
             matchResult.getPublicId(),
+            resume.getFileName(),
+            matchResult.getAnalyzedAt(),
+            resume.getTargetRole(),
+            resume.getExperienceYears(),
             scores.overallScore(), scores.statusLabel(),
             scores.atsScore(), scores.skillsScore(),
             scores.impactScore(), scores.projectScore(),
@@ -157,7 +161,12 @@ public class AnalysisService {
         List<RiskResponse> risks = scoreEngine.score(resumeText, jdText, hasFormattingRisk, hasGraphicsRisk).risks();
 
         return new AnalysisResponse(
-            mr.getPublicId(), mr.getOverallScore(), mr.getStatusLabel(),
+            mr.getPublicId(),
+            mr.getResume().getFileName(),
+            mr.getAnalyzedAt(),
+            mr.getResume().getTargetRole(),
+            mr.getResume().getExperienceYears(),
+            mr.getOverallScore(), mr.getStatusLabel(),
             mr.getAtsScore(), mr.getSkillsScore(),
             mr.getImpactScore(), mr.getProjectScore(),
             mr.getWritingScore(), mr.getProfessionalismScore(),

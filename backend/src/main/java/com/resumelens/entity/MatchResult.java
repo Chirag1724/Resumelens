@@ -51,7 +51,7 @@ public class MatchResult {
             this.publicId = UUID.randomUUID();
         }
         if (this.analyzedAt == null) {
-            this.analyzedAt = LocalDateTime.now();
+            this.analyzedAt = LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         }
     }
 
