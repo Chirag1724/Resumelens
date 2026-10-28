@@ -31,7 +31,7 @@ public class TfIdfCalculator {
         Map<String, Double> tf = new HashMap<>();
         for (String token : tokens) {
             if (!STOPWORDS.contains(token)) {
-                tf.merge(token, 1.0, Double::sum);
+                tf.merge(token, 1.0, (a, b) -> a + b);
             }
         }
         // Normalise by document length
@@ -51,7 +51,7 @@ public class TfIdfCalculator {
             Set<String> terms = Arrays.stream(tokenize(doc))
                     .filter(t -> !STOPWORDS.contains(t))
                     .collect(Collectors.toSet());
-            terms.forEach(t -> df.merge(t, 1, Integer::sum));
+            terms.forEach(t -> df.merge(t, 1, (a, b) -> a + b));
         }
         Map<String, Double> idfMap = new HashMap<>();
         df.forEach((term, count) ->
@@ -86,7 +86,7 @@ public class TfIdfCalculator {
         // Each non-blank sentence/line is one document for IDF
         // Split on: newline, period, !, ?, semicolon, bullet, en-dash, hyphen
         List<String> lines = Arrays.stream(text.split("[\\n.!?;•–-]+"))
-                .map(String::trim)
+                .map(s -> s.trim())
                 .filter(l -> !l.isBlank())
                 .collect(Collectors.toList());
         if (lines.isEmpty()) lines = List.of(text);
@@ -99,7 +99,7 @@ public class TfIdfCalculator {
                 .filter(e -> e.getValue() > 0.0)
                 .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
                 .limit(topN)
-                .map(Map.Entry::getKey)
+                .map(e -> e.getKey())
                 .collect(Collectors.toList());
     }
 

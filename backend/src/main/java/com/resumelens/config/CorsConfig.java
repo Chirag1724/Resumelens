@@ -23,7 +23,7 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
         List<String> origins = Arrays.stream(allowedOriginsProperty.split(","))
-                .map(String::trim)
+                .map(s -> s.trim())
                 .filter(origin -> !origin.isEmpty() && !origin.contains("*"))
                 .toList();
         if (origins.isEmpty()) {

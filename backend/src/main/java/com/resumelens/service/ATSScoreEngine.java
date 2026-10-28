@@ -355,7 +355,7 @@ public class ATSScoreEngine {
         Map<String, String> sections = resumeParser.extractSections(resumeText);
         String projectsSection = sections.entrySet().stream()
             .filter(e -> e.getKey().contains("PROJECT"))
-            .map(Map.Entry::getValue)
+            .map(e -> e.getValue())
             .findFirst().orElse(null);
 
         if (projectsSection == null || projectsSection.isBlank()) {

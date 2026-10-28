@@ -99,7 +99,9 @@ docs/       Architecture documentation, scoring rules, conventions, and decision
    # Edit backend/.env with your actual database credentials and JWT secret
    ```
 
-   > **Important:** Spring Boot does **not** load `.env` files natively. Do **not** add a dotenv library — instead, export the variables in your shell before running the application, or configure them in your IDE run configuration.
+   > **Tip:** Spring Boot 3 natively loads `backend/.env` automatically on startup via `spring.config.import` configured in `application.yml`. Once you fill out `backend/.env`, you can directly run the backend!
+   > 
+   > If you prefer setting system environment variables manually or for CI/CD, you can still export them in your shell or IDE run configurations:
 
    **Shell (Linux / macOS / Git Bash) — local PostgreSQL:**
    ```bash

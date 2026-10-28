@@ -46,7 +46,7 @@ public class PromptBuilderService {
         List<SectionScore> sections = sectionScoreRepository.findByMatchResultPublicId(matchResultPublicId);
 
         List<SectionScore> weakSections = sections.stream()
-            .sorted(Comparator.comparingDouble(SectionScore::getScore))
+            .sorted(Comparator.comparingDouble(s -> s.getScore()))
             .limit(3)
             .collect(Collectors.toList());
 
@@ -151,7 +151,7 @@ public class PromptBuilderService {
     private String extractMissingFromSections(List<SectionScore> sections) {
         return sections.stream()
             .filter(s -> s.getMissingKeywords() != null && !s.getMissingKeywords().isBlank())
-            .map(SectionScore::getMissingKeywords)
+            .map(s -> s.getMissingKeywords())
             .findFirst()
             .orElse("(none detected)");
     }

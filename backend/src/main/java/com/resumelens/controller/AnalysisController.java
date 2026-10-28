@@ -46,6 +46,7 @@ public class AnalysisController {
     }
 
     @GetMapping("/{id}/report")
+    @SuppressWarnings("null")
     public ResponseEntity<byte[]> downloadReport(@PathVariable UUID id) {
         byte[] pdf = reportGeneratorService.generatePdfReport(id);
         return ResponseEntity.ok()
