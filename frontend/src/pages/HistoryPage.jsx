@@ -105,7 +105,7 @@ export default function HistoryPage() {
     }));
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+    <div className="w-full max-w-6xl xl:max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
       {/* Page Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
@@ -125,11 +125,52 @@ export default function HistoryPage() {
       {/* Loading Skeleton State */}
       {loading && (
         <div className="space-y-6" aria-busy="true" aria-label="Loading analysis history">
-          <div className="h-[260px] bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] animate-pulse" />
+          {/* Chart card skeleton */}
+          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 animate-pulse">
+            <div className="flex items-center justify-between mb-6">
+              <div className="space-y-1.5">
+                <div className="w-32 h-3.5 bg-[var(--bg-elevated)] rounded" />
+                <div className="w-56 h-5 bg-[var(--bg-elevated)] rounded" />
+              </div>
+              <div className="w-20 h-6 bg-[var(--bg-elevated)] rounded-full" />
+            </div>
+            {/* Chart line & grid mockup */}
+            <div className="h-[200px] w-full flex items-end justify-between gap-3 pt-8 px-4 border-b border-[var(--border)]">
+              {[40, 65, 55, 75, 70, 85, 80].map((h, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                  <div
+                    className="w-full bg-[rgba(232,96,46,0.15)] rounded-t-[4px] border-t-2 border-[var(--brand-500)]"
+                    style={{ height: `${h}%` }}
+                  />
+                  <div className="w-8 h-2.5 bg-[var(--bg-elevated)] rounded" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* History cards list skeleton */}
           <div className="space-y-3">
-            <div className="h-20 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] animate-pulse" />
-            <div className="h-20 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] animate-pulse" />
-            <div className="h-20 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] animate-pulse" />
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-pulse"
+              >
+                <div className="space-y-2 flex-1">
+                  <div className="w-48 h-5 bg-[var(--bg-elevated)] rounded" />
+                  <div className="flex items-center gap-4">
+                    <div className="w-32 h-3.5 bg-[var(--bg-elevated)] rounded" />
+                    <div className="w-24 h-3.5 bg-[var(--bg-elevated)] rounded" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 shrink-0">
+                  <div className="space-y-1 text-right">
+                    <div className="w-14 h-6 bg-[var(--bg-elevated)] rounded ml-auto" />
+                    <div className="w-20 h-4 bg-[var(--bg-elevated)] rounded" />
+                  </div>
+                  <div className="w-8 h-8 rounded-[8px] bg-[var(--bg-elevated)] border border-[var(--border)]" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

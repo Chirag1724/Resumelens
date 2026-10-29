@@ -2,7 +2,7 @@ import { SCORING_CATEGORIES } from '../lib/scoring';
 import { Sparkles } from 'lucide-react';
 
 /**
- * SummaryCard: Displays the deterministic summary sentence derived from overall score,
+ * SummaryCard: Displays the summary sentence derived from overall score,
  * tier, strongest and weakest dimensions, high severity risks, and missing keywords.
  *
  * @param {Object} props
@@ -11,6 +11,7 @@ import { Sparkles } from 'lucide-react';
  * @param {Array<Object>} props.sectionScores - Array of section score objects from the API
  * @param {number} props.highRiskCount - Number of high severity risks found
  * @param {number} props.missingKeywordCount - Number of missing keywords found
+ * @param {boolean} [props.scoreCapped=false] - Whether the score was capped due to low job match
  */
 export default function SummaryCard({
   overallScore = 0,
@@ -18,6 +19,7 @@ export default function SummaryCard({
   sectionScores = [],
   highRiskCount = 0,
   missingKeywordCount = 0,
+  scoreCapped = false,
 }) {
   const roundedOverall = Math.round(Number(overallScore) || 0);
 
@@ -60,7 +62,11 @@ export default function SummaryCard({
     findingPhrase = `${riskPart} and ${kwPart} were found.`;
   }
 
-  const summaryText = `Your resume scored ${roundedOverall} out of 100, rated ${tierLabel}. Strongest area: ${strongest.name} (${strongest.score}). Weakest area: ${weakest.name} (${weakest.score}). ${findingPhrase}`;
+  const cappedSentence = scoreCapped
+    ? ' The overall score is limited because the job match is low.'
+    : '';
+
+  const summaryText = `Your resume scored ${roundedOverall} out of 100, rated ${tierLabel}. Strongest area: ${strongest.name} (${strongest.score}). Weakest area: ${weakest.name} (${weakest.score}). ${findingPhrase}${cappedSentence}`;
 
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 relative overflow-hidden">
@@ -69,7 +75,7 @@ export default function SummaryCard({
           <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
         </div>
         <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--text-secondary)]">
-          Deterministic summary
+          Summary
         </span>
       </div>
 

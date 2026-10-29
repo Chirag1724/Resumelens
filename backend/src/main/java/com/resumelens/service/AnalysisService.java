@@ -5,7 +5,6 @@ import com.resumelens.dto.response.RiskResponse;
 import com.resumelens.dto.response.SectionScoreResponse;
 import com.resumelens.dto.response.SuggestionResponse;
 import com.resumelens.entity.*;
-import com.resumelens.exception.InvalidInputException;
 import com.resumelens.exception.ResourceNotFoundException;
 import com.resumelens.repository.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -65,7 +64,11 @@ public class AnalysisService {
             jd = jobDescriptionRepository.save(
                 new JobDescription(jobTitle != null ? jobTitle : "Untitled", rawJdText, ""));
         } else {
-            throw new InvalidInputException("Provide either jobDescriptionId or rawJobDescription.");
+            String defaultJd = "Software Engineer responsible for designing, developing, and deploying scalable software systems. " +
+                    "Requirements include proficiency in programming languages (such as Java, Python, JavaScript, TypeScript, or C++), " +
+                    "data structures, algorithms, databases, REST APIs, Git, and cloud services.";
+            jd = jobDescriptionRepository.save(
+                new JobDescription(jobTitle != null && !jobTitle.isBlank() ? jobTitle : "General Software Engineer", defaultJd, ""));
         }
 
         String resumeText = resume.getRawText();
@@ -108,7 +111,7 @@ public class AnalysisService {
         List<String> weakVerbs      = suggestionEngine.detectWeakVerbs(resumeText);
         List<String> unquantified   = suggestionEngine.checkQuantification(resumeText);
         List<SuggestionResponse> suggestions = suggestionEngine.generateTopSuggestions(
-            scores.missingKeywords(), weakVerbs, unquantified, scores.overallScore());
+            scores.missingKeywords(), weakVerbs, unquantified, scores.atsScore());
 
         // Build and persist improvement prompt
         String prompt = promptBuilder.buildFixPrompt(matchResult.getPublicId(), "Simple Single-Column");
@@ -130,6 +133,7 @@ public class AnalysisService {
             resume.getTargetRole(),
             resume.getExperienceYears(),
             scores.overallScore(), scores.statusLabel(),
+            scores.uncappedScore(), scores.scoreCapped(),
             scores.atsScore(), scores.skillsScore(),
             scores.impactScore(), scores.projectScore(),
             scores.writingScore(), scores.professionalismScore(),
@@ -153,12 +157,22 @@ public class AnalysisService {
         List<String> weakVerbs = suggestionEngine.detectWeakVerbs(resumeText);
         List<String> unquantified = suggestionEngine.checkQuantification(resumeText);
         List<SuggestionResponse> suggestions = suggestionEngine.generateTopSuggestions(
-            missingKeywords, weakVerbs, unquantified, mr.getOverallScore());
+            missingKeywords, weakVerbs, unquantified, mr.getAtsScore());
 
         String jdText = mr.getJobDescription().getDescription();
         boolean hasFormattingRisk = mr.getResume().hasFormattingRisk() || resumeParser.detectFormattingRisks(resumeText);
         boolean hasGraphicsRisk = mr.getResume().hasGraphicsRisk();
         List<RiskResponse> risks = scoreEngine.score(resumeText, jdText, hasFormattingRisk, hasGraphicsRisk).risks();
+
+        double uncappedScore = Math.round((
+            mr.getAtsScore() * ATSScoreEngine.WEIGHT_ATS +
+            mr.getSkillsScore() * ATSScoreEngine.WEIGHT_SKILLS +
+            mr.getImpactScore() * ATSScoreEngine.WEIGHT_IMPACT +
+            mr.getProjectScore() * ATSScoreEngine.WEIGHT_PROJECT +
+            mr.getWritingScore() * ATSScoreEngine.WEIGHT_WRITING +
+            mr.getProfessionalismScore() * ATSScoreEngine.WEIGHT_PROFESSIONAL
+        ) * 100.0) / 100.0;
+        boolean scoreCapped = mr.getOverallScore() < uncappedScore;
 
         return new AnalysisResponse(
             mr.getPublicId(),
@@ -167,6 +181,7 @@ public class AnalysisService {
             mr.getResume().getTargetRole(),
             mr.getResume().getExperienceYears(),
             mr.getOverallScore(), mr.getStatusLabel(),
+            uncappedScore, scoreCapped,
             mr.getAtsScore(), mr.getSkillsScore(),
             mr.getImpactScore(), mr.getProjectScore(),
             mr.getWritingScore(), mr.getProfessionalismScore(),

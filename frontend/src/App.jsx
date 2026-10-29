@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import PageBackground from './components/PageBackground';
@@ -13,6 +13,8 @@ import { NotFoundPage } from './pages/Placeholders';
 function TopBar() {
   const { isAuthenticated, userEmail, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isAuth = location.pathname === '/login';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleHistoryClick = (e) => {
@@ -23,77 +25,67 @@ function TopBar() {
   };
 
   return (
-    <header className="sticky top-4 z-50 px-4 sm:px-6 w-full max-w-5xl mx-auto">
-      <nav className="rounded-full bg-[var(--bg-card)] border border-[var(--border)] px-4 sm:px-6 py-2.5 flex items-center justify-between shadow-[0_20px_40px_rgba(0,0,0,0.40)]">
-        {/* Left: SVG Wordmark */}
+    <header className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 lg:px-12 w-full max-w-[1536px] mx-auto pt-3 sm:pt-5 pointer-events-none">
+      <nav className="pointer-events-auto rounded-2xl sm:rounded-full bg-[rgba(14,14,18,0.75)] backdrop-blur-xl border border-white/10 px-5 sm:px-8 lg:px-10 py-3 sm:py-3.5 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_30px_rgba(232,96,46,0.06)]">
+        {/* Left: Brand Logo & Wordmark */}
         <Link
           to="/"
-          className="flex items-center gap-2 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-400)] rounded-full"
+          className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8602E] rounded-xl"
+          aria-label="ResumeLens Home"
         >
-          <svg
-            className="w-5 h-5 text-[var(--brand-500)] shrink-0 transition-transform duration-150 group-hover:scale-105"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <circle cx="11.5" cy="14.5" r="2.5" />
-            <line x1="13.3" y1="16.3" x2="16" y2="19" />
-          </svg>
-          <span className="font-heading font-bold text-sm tracking-tight text-[var(--text)]">
+          <img
+            src="/favicon.svg"
+            alt="ResumeLens Logo"
+            className="w-6 h-6 sm:w-7 sm:h-7 object-contain rounded-md transition-transform duration-150 group-hover:scale-105"
+          />
+          <span className="font-heading font-bold text-base sm:text-lg tracking-tight text-[var(--text)]">
             ResumeLens
           </span>
         </Link>
 
         {/* Center: Desktop Navigation Links */}
-        <div className="hidden md:flex items-center gap-6 text-sm font-medium">
+        <div className="hidden md:flex items-center gap-8 lg:gap-10 text-[15px] sm:text-base font-semibold">
           <Link
             to="/"
-            className="text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-400)] rounded-[6px]"
+            className="text-neutral-300 hover:text-white transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8602E] rounded-md py-1"
           >
             Home
           </Link>
           <Link
             to="/history"
             onClick={handleHistoryClick}
-            className="text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-400)] rounded-[6px]"
+            className="text-neutral-300 hover:text-white transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8602E] rounded-md py-1"
           >
             History
           </Link>
-          {!isAuthenticated && (
-            <Link
-              to="/login"
-              className="text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-400)] rounded-[6px]"
-            >
-              Login
-            </Link>
-          )}
         </div>
 
         {/* Right: User Email / Auth Controls */}
-        <div className="hidden md:flex items-center gap-3 text-sm">
+        <div className="hidden md:flex items-center gap-4 text-sm">
           {isAuthenticated ? (
             <>
-              <span className="text-xs text-[var(--text-secondary)] font-mono px-2.5 py-1 rounded-[6px] bg-[var(--bg-elevated)] border border-[var(--border)] max-w-[200px] truncate">
+              <span className="text-xs sm:text-sm text-neutral-300 font-mono px-3.5 py-1.5 rounded-xl bg-white/5 border border-white/10 max-w-[220px] truncate">
                 {userEmail}
               </span>
               <button
                 type="button"
                 onClick={logout}
-                className="px-3 py-1.5 rounded-[9px] text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--danger)] hover:bg-[rgba(239,68,68,0.12)] border border-[var(--border)] transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-400)]"
+                className="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-neutral-300 hover:text-red-400 hover:bg-red-500/10 border border-white/10 transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8602E]"
               >
                 Logout
               </button>
             </>
+          ) : isAuth ? (
+            <Link
+              to="/"
+              className="px-5 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold text-neutral-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-200"
+            >
+              Scanner
+            </Link>
           ) : (
             <Link
               to="/login"
-              className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[var(--brand-500)] hover:bg-[var(--brand-600)] text-[var(--on-brand)] transition-colors duration-150 shadow-[var(--shadow-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-400)]"
+              className="px-6 sm:px-7 py-2.5 sm:py-3 rounded-full text-sm sm:text-[15px] font-bold bg-[#E8602E] hover:bg-[#f06e3d] text-white transition-all duration-200 transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8602E]"
             >
               Login
             </Link>
@@ -105,22 +97,22 @@ function TopBar() {
           <button
             type="button"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="p-1.5 rounded-[9px] text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-elevated)] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-400)] cursor-pointer"
+            className="p-2 rounded-xl text-neutral-300 hover:text-white hover:bg-white/10 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8602E] cursor-pointer"
             aria-label="Toggle navigation menu"
             aria-expanded={mobileMenuOpen}
           >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </nav>
 
       {/* Mobile menu drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden mt-2 rounded-[12px] bg-[var(--bg-card)] border border-[var(--border)] p-4 shadow-[0_40px_80px_rgba(0,0,0,0.40)] flex flex-col gap-3">
+        <div className="pointer-events-auto md:hidden mt-3 rounded-2xl bg-[rgba(14,14,18,0.95)] backdrop-blur-xl border border-white/10 p-5 shadow-2xl flex flex-col gap-3">
           <Link
             to="/"
             onClick={() => setMobileMenuOpen(false)}
-            className="text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors duration-150 py-1"
+            className="text-base font-semibold text-neutral-300 hover:text-white transition-colors duration-150 py-2"
           >
             Home
           </Link>
@@ -130,13 +122,13 @@ function TopBar() {
               setMobileMenuOpen(false);
               handleHistoryClick(e);
             }}
-            className="text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors duration-150 py-1"
+            className="text-base font-semibold text-neutral-300 hover:text-white transition-colors duration-150 py-2"
           >
             History
           </Link>
           {isAuthenticated ? (
-            <div className="pt-2 border-t border-[var(--border)] flex flex-col gap-2">
-              <span className="text-xs text-[var(--text-secondary)] font-mono truncate">
+            <div className="pt-3 border-t border-white/10 flex flex-col gap-2.5">
+              <span className="text-xs text-neutral-400 font-mono truncate">
                 {userEmail}
               </span>
               <button
@@ -145,16 +137,24 @@ function TopBar() {
                   setMobileMenuOpen(false);
                   logout();
                 }}
-                className="text-left text-sm font-medium text-[var(--danger)] hover:underline py-1 cursor-pointer"
+                className="text-left text-sm font-semibold text-red-400 hover:underline py-1 cursor-pointer"
               >
                 Logout
               </button>
             </div>
+          ) : isAuth ? (
+            <Link
+              to="/"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-center font-bold text-white bg-white/10 py-3 rounded-xl mt-2 transition-transform active:scale-95"
+            >
+              Scanner
+            </Link>
           ) : (
             <Link
               to="/login"
               onClick={() => setMobileMenuOpen(false)}
-              className="text-sm font-semibold text-[var(--brand-500)] hover:text-[var(--brand-400)] transition-colors duration-150 py-1"
+              className="text-center font-bold text-white bg-[#E8602E] hover:bg-[#f06e3d] py-3 rounded-xl mt-2 transition-transform active:scale-95"
             >
               Login
             </Link>
@@ -174,11 +174,19 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
+  const location = useLocation();
+  const isHome = location.pathname === '/';
+  const isAuth = location.pathname === '/login';
+
   return (
     <AuthProvider>
-      <PageBackground>
+      <PageBackground isAuth={isAuth}>
         <TopBar />
-        <main className="flex-1">
+        <main
+          className={`flex-1 w-full ${
+            isHome || isAuth ? '' : 'pt-24 sm:pt-28'
+          } ${isAuth ? 'h-full max-h-screen overflow-hidden' : ''}`}
+        >
           <Routes>
             <Route
               path="/"

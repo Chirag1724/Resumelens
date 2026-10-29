@@ -68,8 +68,42 @@ export const uploadResume = (formData) =>
     },
   });
 
+/**
+ * @typedef {Object} AnalysisResponse
+ * @property {string} id - Analysis report UUID
+ * @property {string} fileName - Original file name
+ * @property {string} analyzedAt - Timestamp of analysis
+ * @property {string|null} targetRole - Target role hint
+ * @property {number|null} experienceYears - Candidate experience in years
+ * @property {number} overallScore - Capped overall score
+ * @property {string} statusLabel - Qualitative score tier label
+ * @property {number} uncappedScore - Plain weighted sum of six dimension scores
+ * @property {boolean} scoreCapped - True if overall score was capped by job fit
+ * @property {number} atsScore - ATS dimension score
+ * @property {number} skillsScore - Skills dimension score
+ * @property {number} impactScore - Impact dimension score
+ * @property {number} projectScore - Project dimension score
+ * @property {number} writingScore - Writing dimension score
+ * @property {number} professionalismScore - Professionalism dimension score
+ * @property {number} keywordMatchPercent - Percentage of keywords matched
+ * @property {Array<Object>} sectionScores - Dimension breakdown
+ * @property {Array<Object>} suggestions - Actionable suggestions
+ * @property {Array<Object>} risks - Scoring risks
+ * @property {string} improvementPrompt - Formatted fix prompt
+ */
+
+/**
+ * Run analysis on an uploaded resume against a job description.
+ * @param {Object} payload
+ * @returns {Promise<AnalysisResponse>}
+ */
 export const runAnalysis = (payload) => client.post('/analysis/match', payload);
 
+/**
+ * Retrieve analysis result by report ID.
+ * @param {string} id - Analysis report UUID
+ * @returns {Promise<AnalysisResponse>}
+ */
 export const getAnalysis = (id) => client.get(`/analysis/${id}`);
 
 export const getFixPrompt = (id, templateStyle = 'Simple Single-Column') =>

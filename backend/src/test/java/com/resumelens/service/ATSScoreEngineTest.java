@@ -44,7 +44,7 @@ class ATSScoreEngineTest {
     void setUp() {
         engine = new ATSScoreEngine(tfidf, similarity, resumeParser);
         when(resumeParser.hasContactInfo(anyString())).thenReturn(true);
-        when(resumeParser.extractSections(anyString())).thenReturn(Map.of());
+        when(resumeParser.extractSections(anyString())).thenAnswer(inv -> new ResumeParserService().extractSections(inv.getArgument(0)));
     }
 
     // ATS COMPATIBILITY — section headings
@@ -243,14 +243,14 @@ class ATSScoreEngineTest {
 
     @Test
     void should_deductUpTo15FromWritingScore_forWordRepetitionAt5PerWord() {
-        // 3 distinct words each repeated >5 times → 3×5=15, capped at 15
+        // 3 distinct plain non-skill, non-generic words each repeated >5 times (6 times each) -> 3 * 5 = 15, capped at 15
         String resume = "EDUCATION\nEXPERIENCE\nSKILLS\n" +
-                "java java java java java java " + // 6 → 1 over-repeated word
-                "docker docker docker docker docker docker " + // 6 → 2
-                "spring spring spring spring spring spring"; // 6 → 3 → total 15, capped
+                "managed managed managed managed managed managed " + // 6 -> 1 over-repeated word
+                "custom custom custom custom custom custom " + // 6 -> 2
+                "simple simple simple simple simple simple"; // 6 -> 3 -> total 15, capped
         ATSScoreEngine.ScoreResult r = engine.score(resume, TestData.JD_TWO_TERMS, false, false);
         assertEquals(85.0, r.writingScore(), 0.01,
-                "3 over-repeated words × 5 = 15, capped → –15 → writingScore 85");
+                "3 over-repeated words * 5 = 15, capped -> -15 -> writingScore 85");
     }
 
     @Test
@@ -290,14 +290,16 @@ class ATSScoreEngineTest {
 
     @Test
     void should_deduct5_whenBulletStyleIsInconsistent() {
-        // Mix of dash and bullet styles
+        // Mix of dash (>= 2 lines) and bullet styles
         String resume = "EDUCATION\nEXPERIENCE\n" +
                 "- java developer\n" +
+                "- backend engineer\n" +
                 "• python expert\n" +
+                "• cloud architect\n" +
                 "SKILLS\njava python 40%";
         ATSScoreEngine.ScoreResult r = engine.score(resume, TestData.JD_TWO_TERMS, false, false);
         assertEquals(95.0, r.professionalismScore(), 0.01,
-                "Mixed bullet styles (- and •) → –5 → professionalismScore 95");
+                "Mixed bullet styles (- and •) -> -5 -> professionalismScore 95");
     }
 
     @Test
@@ -529,8 +531,8 @@ class ATSScoreEngineTest {
         // - Multi-column formatting risk (-10)
         // - Graphics risk (-8)
         // - Keyword density < 30% (-15)
-        // - No measurable achievements (-5)
-        // ATS total deductions: -72 -> score 28.0 (>= 0 floor)
+        // - No measurable achievements (0: 2020 is a 4-digit standalone number so -5 risk does not fire under new rule)
+        // ATS total deductions: -67 -> score 33.0 (>= 0 floor)
         //
         // Writing deductions:
         // - Sentence length > 35 words (-10)
@@ -564,7 +566,7 @@ class ATSScoreEngineTest {
 
         ATSScoreEngine.ScoreResult r = engine.score(sb.toString(), TestData.JD_FOREIGN_TERMS, true, true);
 
-        assertEquals(28.0, r.atsScore(), 0.01, "ATS score must equal 28.0 literal worst-case score");
+        assertEquals(33.0, r.atsScore(), 0.01, "ATS score must equal 33.0 literal worst-case score");
         assertEquals(35.0, r.writingScore(), 0.01, "Writing score must equal 35.0 literal worst-case score");
         assertEquals(50.0, r.professionalismScore(), 0.01, "Professionalism score must equal 50.0 literal worst-case score");
 
@@ -678,5 +680,155 @@ class ATSScoreEngineTest {
             assertTrue(currentRank >= prevRank, "Risks must be sorted in order of severity (HIGH -> MEDIUM -> LOW)");
             prevRank = currentRank;
         }
+    }
+
+    // REQUIREMENT 5 TESTS - Hand-computed literals for false positive reduction
+
+    @Test
+    void should_countStandaloneNumbersAsQuantified_andRejectGluedNumbers() {
+        // Standalone numbers count
+        assertTrue(ATSScoreEngine.isQuantified("6000+"), "6000+ must count as quantified");
+        assertTrue(ATSScoreEngine.isQuantified("200 teams"), "200 teams must count as quantified");
+        assertTrue(ATSScoreEngine.isQuantified("Rank 152"), "Rank 152 must count as quantified");
+        assertTrue(ATSScoreEngine.isQuantified("30%"), "30% must count as quantified");
+
+        // Glued numbers do not count
+        assertFalse(ATSScoreEngine.isQuantified("v5"), "v5 must not count as quantified");
+        assertFalse(ATSScoreEngine.isQuantified("ESP32"), "ESP32 must not count as quantified");
+        assertFalse(ATSScoreEngine.isQuantified("S3"), "S3 must not count as quantified");
+        assertFalse(ATSScoreEngine.isQuantified("2nd"), "2nd must not count as quantified");
+
+        // Verify impact on minus 5 risk in ATS Compatibility
+        String resumeQuantified = "EDUCATION\nBachelor\nEXPERIENCE\n" +
+                "Rank 152 in coding challenge with 6000+ participants and 200 teams\n" +
+                "SKILLS\njava python";
+        ATSScoreEngine.ScoreResult rQuantified = engine.score(resumeQuantified, TestData.JD_TWO_TERMS, false, false);
+        assertEquals(100.0, rQuantified.atsScore(), 0.01,
+                "Resume with standalone numbers (Rank 152, 6000+, 200 teams) must not incur -5 deduction");
+        assertTrue(rQuantified.risks().stream().noneMatch(rk -> "NO_MEASURABLE_ACHIEVEMENTS".equals(rk.title()) || rk.title().contains("Measurable")),
+                "No measurable achievements risk must not fire when standalone numbers exist");
+
+        String resumeGlued = "EDUCATION\nBachelor\nEXPERIENCE\n" +
+                "Firmware development for ESP32 and S3 architecture on v5 release in 2nd phase\n" +
+                "SKILLS\njava python";
+        ATSScoreEngine.ScoreResult rGlued = engine.score(resumeGlued, TestData.JD_TWO_TERMS, false, false);
+        assertEquals(95.0, rGlued.atsScore(), 0.01,
+                "Resume with only glued numbers (ESP32, S3, v5, 2nd) must incur -5 deduction");
+        assertTrue(rGlued.risks().stream().anyMatch(rk -> rk.title().contains("Measurable")),
+                "No measurable achievements risk must fire when only glued numbers are present");
+    }
+
+    @Test
+    void should_excludeSkillsAndGenericWordsFromRepetition_andFlagPlainWordManaged() {
+        // Resume where react and tailwind repeat 8 times: skill dictionary terms excluded -> no risk
+        String resumeSkills = "EDUCATION\nBachelor of Science\nEXPERIENCE\n" +
+                "Software engineer who achieved 40% improvement in product delivery.\n" +
+                "react react react react react react react react\n" +
+                "tailwind tailwind tailwind tailwind tailwind tailwind tailwind tailwind\n" +
+                "SKILLS\nreact tailwind";
+        ATSScoreEngine.ScoreResult rSkills = engine.score(resumeSkills, "react tailwind", false, false);
+        assertEquals(100.0, rSkills.writingScore(), 0.01,
+                "Repeating technical skills (react, tailwind) 8 times must incur 0 repetition deduction");
+        assertTrue(rSkills.risks().stream().noneMatch(rk -> rk.title().contains("Repeated")),
+                "No repeated word risk should fire for skill dictionary terms");
+
+        // Resume where plain word 'managed' repeats 8 times: length 7, non-skill, non-generic -> fires risk
+        String resumeManaged = "EDUCATION\nBachelor of Science\nEXPERIENCE\n" +
+                "Software engineer who achieved 40% improvement in product delivery.\n" +
+                "managed managed managed managed managed managed managed managed\n" +
+                "SKILLS\nreact tailwind";
+        ATSScoreEngine.ScoreResult rManaged = engine.score(resumeManaged, "react tailwind", false, false);
+        assertEquals(95.0, rManaged.writingScore(), 0.01,
+                "Repeating plain word 'managed' 8 times must incur -5 repetition deduction (100 - 5 = 95)");
+        assertTrue(rManaged.risks().stream().anyMatch(rk -> rk.title().contains("Repeated")),
+                "Repeated word risk must fire when plain word 'managed' repeats 8 times");
+        var repRisk = rManaged.risks().stream().filter(rk -> rk.title().contains("Repeated")).findFirst().orElseThrow();
+        assertEquals("LOW", repRisk.severity(), "5 point deduction must produce LOW severity");
+    }
+
+    @Test
+    void should_handleBulletConsistency_singleDashLineConsistent_multipleDashLinesInconsistent() {
+        // Resume with bullets using only • plus one line starting with a dash: consistent bullets
+        String resumeSingleDash = "EDUCATION\nBachelor\nEXPERIENCE\n" +
+                "• Led software engineering team achieving 40% improvement\n" +
+                "• Designed distributed systems architecture\n" +
+                "• Deployed automated cloud infrastructure\n" +
+                "- single wrapped line starting with a dash\n" +
+                "SKILLS\njava python";
+        ATSScoreEngine.ScoreResult rSingleDash = engine.score(resumeSingleDash, TestData.JD_TWO_TERMS, false, false);
+        assertEquals(100.0, rSingleDash.professionalismScore(), 0.01,
+                "Bullets using only • plus one dash line must have consistent bullets (professionalismScore 100)");
+        assertTrue(rSingleDash.risks().stream().noneMatch(rk -> rk.title().contains("Bullet")),
+                "Inconsistent bullets risk must not fire when only one line starts with dash");
+
+        // Resume using • on 3 lines and - on 3 lines: inconsistent bullets
+        String resumeMultiDash = "EDUCATION\nBachelor\nEXPERIENCE\n" +
+                "• Led software engineering team achieving 40% improvement\n" +
+                "• Designed distributed systems architecture\n" +
+                "• Deployed automated cloud infrastructure\n" +
+                "- Built reliable backend APIs with high throughput\n" +
+                "- Streamlined integration pipelines across environments\n" +
+                "- Coordinated cross functional release readiness\n" +
+                "SKILLS\njava python";
+        ATSScoreEngine.ScoreResult rMultiDash = engine.score(resumeMultiDash, TestData.JD_TWO_TERMS, false, false);
+        assertEquals(95.0, rMultiDash.professionalismScore(), 0.01,
+                "Resume with • on 3 lines and - on 3 lines must incur -5 deduction (professionalismScore 95)");
+        assertTrue(rMultiDash.risks().stream().anyMatch(rk -> rk.title().contains("Bullet")),
+                "Inconsistent bullets risk must fire when both • and - have multiple lines");
+    }
+
+    @Test
+    void should_formatRepeatedWordsDescriptionWithHandComputedCounts() {
+        // Hand-computed counts:
+        // 'managed' appears 8 times (> 5)
+        // 'custom' appears 6 times (> 5)
+        String resume = "EDUCATION\nBachelor of Science\nEXPERIENCE\n" +
+                "Software developer who achieved 40% improvement in product delivery.\n" +
+                "managed managed managed managed managed managed managed managed\n" +
+                "custom custom custom custom custom custom\n" +
+                "SKILLS\njava python";
+
+        ATSScoreEngine.ScoreResult result = engine.score(resume, "java python", false, false);
+        var repRisk = result.risks().stream()
+                .filter(rk -> rk.title().contains("Repeated"))
+                .findFirst()
+                .orElseThrow();
+
+        // Hand-computed expected literal ending
+        String expectedEnding = "Words used more than 5 times: managed (8), custom (6).";
+        assertTrue(repRisk.description().endsWith(expectedEnding),
+                "Repeated words description must end with hand-computed literal: " + expectedEnding);
+    }
+
+    @Test
+    void should_haveNoMissingHeadingDeduction_whenUsingAliasesWorkExperienceTechnicalSkillsAcademicProjectsEducation() {
+        String resume = "Work Experience:\n" +
+                "Software Engineer who built cloud pipelines with 40% speedup\n" +
+                "Technical Skills:\n" +
+                "java python docker kubernetes\n" +
+                "Academic Projects:\n" +
+                "Developed distributed data analysis system\n" +
+                "Education:\n" +
+                "Bachelor of Computer Science 2020";
+
+        ATSScoreEngine.ScoreResult r = engine.score(resume, TestData.JD_TWO_TERMS, false, false);
+        assertEquals(100.0, r.atsScore(), 0.01,
+                "Resume with Work Experience, Technical Skills, Academic Projects, and Education must have 0 missing heading deduction (atsScore 100)");
+        assertTrue(r.risks().stream().noneMatch(rk -> rk.title().contains("Missing Section Headings")),
+                "No MISSING_SECTIONS risk should fire when all required section aliases are present");
+    }
+
+    @Test
+    void should_deductForMissingExperience_whenExperienceSentenceIsNotAHeading() {
+        // Resume has Education and Skills, but only a normal sentence mentioning experience
+        String resume = "EDUCATION\nBachelor of Computer Science\n" +
+                "SKILLS\njava python\n" +
+                "Experience with React and Node for 3 years achieving 40% improvement";
+        ATSScoreEngine.ScoreResult r = engine.score(resume, TestData.JD_TWO_TERMS, false, false);
+        // Experience is missing because the sentence is not a heading -> 1 missing section -> -8 deduction
+        assertEquals(92.0, r.atsScore(), 0.01,
+                "Sentence 'Experience with React and Node' must not count as an Experience section heading; -8 deduction must apply");
+        assertTrue(r.risks().stream().anyMatch(rk -> rk.title().contains("Missing Section Headings")),
+                "MISSING_SECTIONS risk must fire when Experience section heading is absent");
     }
 }

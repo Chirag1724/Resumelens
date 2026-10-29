@@ -32,8 +32,20 @@ export const SCORE_TIERS = {
 };
 
 export function getScoreDetails(scoreOrTier) {
-  if (typeof scoreOrTier === 'string' && SCORE_TIERS[scoreOrTier.toUpperCase()]) {
-    return SCORE_TIERS[scoreOrTier.toUpperCase()];
+  if (typeof scoreOrTier === 'string') {
+    const normalized = scoreOrTier.trim().toUpperCase();
+    if (SCORE_TIERS[normalized]) {
+      return SCORE_TIERS[normalized];
+    }
+    for (const key of Object.keys(SCORE_TIERS)) {
+      if (
+        normalized === SCORE_TIERS[key].label.toUpperCase() ||
+        normalized === key ||
+        normalized.startsWith(key)
+      ) {
+        return SCORE_TIERS[key];
+      }
+    }
   }
   const num = Number(scoreOrTier);
   const validNum = Number.isFinite(num) ? num : 0;

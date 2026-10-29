@@ -1,0 +1,406 @@
+python
+java
+javascript
+typescript
+c++
+c#
+.net
+golang
+rust
+ruby
+php
+swift
+kotlin
+scala
+dart
+perl
+elixir
+haskell
+bash
+powershell
+lua
+matlab
+r
+julia
+sql
+html
+css
+sass
+scss
+less
+react
+reactjs
+next
+nextjs
+next.js
+node
+nodejs
+node js
+express
+expressjs
+spring
+spring boot
+django
+flask
+fastapi
+vue
+vuejs
+angular
+angularjs
+svelte
+sveltekit
+nuxt
+remix
+nestjs
+koa
+rails
+ruby on rails
+laravel
+symfony
+asp.net
+dotnet core
+tailwind
+tailwindcss
+bootstrap
+material-ui
+chakra-ui
+redux
+zustand
+mobx
+graphql
+rest
+restful
+grpc
+websockets
+rxjs
+jquery
+junit
+mockito
+jest
+cypress
+playwright
+selenium
+vitest
+mocha
+chai
+mongodb
+mongo db
+postgresql
+postgres
+mysql
+mariadb
+sqlite
+redis
+memcached
+elasticsearch
+opensearch
+cassandra
+dynamodb
+couchdb
+neo4j
+clickhouse
+snowflake
+bigquery
+databricks
+supabase
+firebase
+aws
+azure
+gcp
+google cloud
+docker
+kubernetes
+k8s
+helm
+terraform
+ansible
+puppet
+chef
+jenkins
+circleci
+gitlab
+gitlab ci
+github actions
+github ci
+linux
+unix
+ubuntu
+debian
+centos
+redhat
+nginx
+apache
+traefik
+envoy
+serverless
+lambda
+ec2
+s3
+ecs
+eks
+gke
+aks
+cloudflare
+cloudfront
+datadog
+prometheus
+grafana
+splunk
+new relic
+elk
+ci/cd
+kafka
+rabbitmq
+activemq
+pytorch
+tensorflow
+keras
+scikit-learn
+pandas
+numpy
+scipy
+spark
+pyspark
+hadoop
+hive
+flink
+airflow
+dbt
+mlops
+nlp
+computer vision
+deep learning
+machine learning
+linear algebra
+statistics
+probability
+calculus
+neural networks
+transformers
+bert
+llm
+llms
+generative ai
+huggingface
+spacy
+nltk
+opencv
+data science
+data engineering
+data analysis
+feature engineering
+model deployment
+hyperparameter tuning
+supervised learning
+unsupervised learning
+reinforcement learning
+transfer learning
+regression
+classification
+clustering
+time series
+random forest
+xgboost
+lightgbm
+catboost
+tableau
+power bi
+looker
+presto
+trino
+microservices
+monolithic
+event-driven
+clean architecture
+domain-driven design
+object-oriented programming
+functional programming
+agile
+scrum
+kanban
+test-driven development
+continuous integration
+continuous delivery
+continuous deployment
+data structures
+algorithms
+system design
+design patterns
+cryptography
+oauth
+oidc
+sso
+jwt
+api gateway
+load balancing
+reverse proxy
+caching
+replication
+sharding
+message queues
+distributed systems
+concurrency
+multithreading
+git
+github
+svn
+maven
+gradle
+webpack
+vite
+babel
+prettier
+eslint
+openapi
+swagger
+postman
+insomnia
+sonarqube
+jira
+confluence
+prisma
+typeorm
+hibernate
+jpa
+sqlalchemy
+pydantic
+celery
+storybook
+webgl
+webassembly
+flutter
+react native
+expo
+argo cd
+flux cd
+istio
+consul
+vault
+linkerd
+vector database
+pgvector
+pinecone
+weaviate
+chromadb
+qdrant
+langchain
+llamaindex
+prompt engineering
+fine-tuning
+embeddings
+rag
+retrieval-augmented generation
+solid principles
+rest api
+soap
+cors
+csrf
+websocket
+grpc api
+graphql api
+nosql
+relational database
+key-value store
+time-series database
+graph database
+data warehouse
+data lake
+etl
+elt
+data pipeline
+predictive modeling
+deep neural networks
+convolutional neural networks
+recurrent neural networks
+lstm
+attention mechanism
+large language models
+prompt tuning
+zero-shot learning
+few-shot learning
+semantic search
+vector search
+nearest neighbors
+decision trees
+gradient boosting
+logistic regression
+linear regression
+dimensionality reduction
+principal component analysis
+pca
+t-sne
+cross-validation
+model evaluation
+confusion matrix
+precision and recall
+f1 score
+roc-auc
+unit testing
+integration testing
+end-to-end testing
+e2e testing
+load testing
+stress testing
+performance tuning
+cloud computing
+devops
+site reliability engineering
+sre
+infrastructure as code
+iac
+containerization
+orchestration
+service mesh
+api management
+monitoring and alerting
+log management
+distributed tracing
+observability
+identity and access management
+iam
+role-based access control
+rbac
+single sign-on
+public key infrastructure
+pki
+tls
+ssl
+https
+tcp/ip
+dns
+http/2
+http/3
+cdn
+load balancer
+proxy
+forward proxy
+database indexing
+query optimization
+acid
+base
+cap theorem
+sharding and partitioning
+data modeling
+schema design
+migration
+version control
+code review
+pair programming
+technical documentation
+software development lifecycle
+sdlc
+devsecops
+penetration testing
+vulnerability scanning
+owasp
+cloud security
+network security
+data privacy
+compliance
+gdpr
+hipaa
+soc 2
+pci dss
+data science
+apache spark
+apache kafka

@@ -35,8 +35,8 @@ These are the only third-party libraries authorised for the roles listed below. 
 
 | Role | Library | Version target | Notes |
 |------|---------|----------------|-------|
-| PDF parsing | Apache PDFBox | 3.x | Extracts plain text from text-layer PDFs; used in `ResumeParserService` |
-| DOCX parsing | Apache POI | 5.x | Extracts plain text from `.docx` files; used in `ResumeParserService` |
+| PDF parsing | Apache PDFBox | 3.x | Extracts plain text from text-layer PDFs; identifies graphics with drawn dimensions >= 72x72 points using PDFStreamEngine CTM tracking; parses canonical resume sections using alias sets and heading normalization rules; used in `ResumeParserService` |
+| DOCX parsing | Apache POI | 5.x | Extracts plain text from `.docx` files; identifies pictures with drawn extent >= 72x72 points (914400 EMU per inch); used in `ResumeParserService` |
 | PDF report generation | iText (Community) | 8.x | Generates downloadable PDF analysis reports; used in ReportGeneratorService |
 
 All three are Apache-licensed or AGPL (iText Community) with no paid-API requirement, consistent with the no-paid-dependency principle in PROJECT_CONTEXT.md.
@@ -101,12 +101,17 @@ frontend/
 
 ```
 backend/
+├── src/main/resources/
+│   ├── application.yml                     # Spring Boot configuration
+│   └── skills.txt                          # Technical skill dictionary (loaded into SkillDictionary)
+│
 └── src/main/java/com/resumelens/
     ├── ResumelensApplication.java          # Spring Boot entry point
     │
     ├── algorithm/                          # Self-implemented NLP algorithms
-    │   ├── SimilarityCalculator.java       # Cosine similarity and Levenshtein fuzzy match
-    │   └── TfIdfCalculator.java            # TF-IDF term weighting
+    │   ├── SimilarityCalculator.java       # Canonical matching, strict fuzzy match, cosine similarity
+    │   ├── SkillDictionary.java            # Immutable technical skill dictionary loader
+    │   └── TfIdfCalculator.java            # TF-IDF term weighting with skill priority
     │
     ├── config/                             # Spring configuration classes
     │   └── CorsConfig.java                 # Configurable CORS filter (CORS_ALLOWED_ORIGINS)
@@ -167,6 +172,16 @@ backend/
         ├── SuggestionEngine.java
         └── UserService.java
 ```
+
+### Section Extraction Architecture
+`ResumeParserService` segments resume raw text into canonical sections using a constant alias table matching the five sections required by scoring:
+- **EXPERIENCE**: experience, work experience, professional experience, internships, employment history
+- **EDUCATION**: education, academic background, qualifications
+- **SKILLS**: skills, technical skills, key skills, core competencies
+- **PROJECTS**: projects, academic projects, personal projects
+- **CERTIFICATIONS**: certifications, courses, achievements, awards
+
+A line is recognized as a section heading only when it meets strict boundary rules: length at most 40 characters, at most 5 words, does not end with a period, and its normalized form (lowercase with `Locale.ROOT`, letters only, single spaces) matches an alias in the table exactly. Normal prose sentences are never classified as headings.
 
 ---
 

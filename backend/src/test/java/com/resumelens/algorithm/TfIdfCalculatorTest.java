@@ -130,4 +130,36 @@ class TfIdfCalculatorTest {
             "Distinctive 'beta' (appears in 1 clause) must rank above ubiquitous 'alpha' " +
             "(appears in all 5 clauses) via semicolon-based IDF corpus. Actual: " + keywords);
     }
+
+    @Test
+    void topKeywords_keywordNoiseTermsAndGenericPhraseAreExcluded() {
+        String jd = "Looking for a software engineer or engineers with good engineering practices and practice. " +
+                "Must evaluate modern techniques and technique. Requires a degree: bachelor, master, or phd in a technical field. " +
+                "Degree in computer science or science preferred. Experience with apache projects.";
+
+        List<String> keywords = calc.topKeywords(jd, 30);
+
+        List<String> noiseTerms = List.of(
+            "engineer", "engineers", "practices", "practice", "evaluate",
+            "techniques", "technique", "degree", "bachelor", "master", "phd",
+            "field", "science", "apache", "computer science"
+        );
+
+        for (String noise : noiseTerms) {
+            assertFalse(keywords.contains(noise), "Noise term '" + noise + "' must never become a keyword");
+        }
+    }
+
+    @Test
+    void topKeywords_multiwordSkillsPreservedAsSingleKeywords() {
+        String jd = "Seeking experience with data science, apache spark, and apache kafka streaming pipelines.";
+        List<String> keywords = calc.topKeywords(jd, 30);
+
+        assertTrue(keywords.contains("data science"), "data science must be preserved as one keyword");
+        assertTrue(keywords.contains("apache spark"), "apache spark must be preserved as one keyword");
+        assertTrue(keywords.contains("apache kafka"), "apache kafka must be preserved as one keyword");
+
+        assertFalse(keywords.contains("apache"), "component word 'apache' must not be added as a separate keyword");
+        assertFalse(keywords.contains("science"), "component word 'science' must not be added as a separate keyword");
+    }
 }

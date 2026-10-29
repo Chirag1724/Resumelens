@@ -165,7 +165,7 @@ export default function ReportPage() {
           Report Not Found
         </h1>
         <p className="text-sm text-[var(--text-secondary)] max-w-md mb-6">
-          The requested report identifier is not a valid capability UUID format.
+          The requested report identifier is not a valid UUID format.
         </p>
         <Link
           to="/"
@@ -181,31 +181,205 @@ export default function ReportPage() {
   // Loading skeleton state
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-8 animate-pulse space-y-8">
-        {/* Action bar skeleton */}
-        <div className="h-14 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px]" />
-
-        {/* Top row skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          <div className="md:col-span-4 h-64 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px]" />
-          <div className="md:col-span-8 h-64 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px]" />
+      <div className="w-full max-w-6xl xl:max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 animate-pulse">
+        {/* 1. Action bar skeleton */}
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-16 h-3 bg-[var(--bg-elevated)] rounded" />
+            <div className="w-36 h-6 bg-[var(--bg-elevated)] rounded-[6px]" />
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="w-36 h-8 bg-[var(--bg-elevated)] rounded-[9px]" />
+            <div className="w-36 h-8 bg-[var(--bg-elevated)] rounded-[9px]" />
+            <div className="w-28 h-8 bg-[var(--bg-elevated)] rounded-[9px]" />
+          </div>
         </div>
 
-        {/* Quick insights skeleton */}
+        {/* 2. Top row: Score Gauge + File Info */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
+          {/* Gauge card (md:col-span-5) */}
+          <div className="md:col-span-5 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 flex flex-col items-center justify-center text-center min-h-[300px]">
+            <div className="w-28 h-3.5 bg-[var(--bg-elevated)] rounded mb-6" />
+            <div className="w-44 h-44 rounded-full border-8 border-[var(--bg-elevated)] flex flex-col items-center justify-center p-4">
+              <div className="w-16 h-10 bg-[var(--bg-elevated)] rounded mb-2" />
+              <div className="w-24 h-5 bg-[var(--bg-elevated)] rounded-full" />
+            </div>
+          </div>
+
+          {/* File info card (md:col-span-7) */}
+          <div className="md:col-span-7 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 flex flex-col justify-between min-h-[300px]">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-[8px] bg-[rgba(232,96,46,0.12)] border border-[rgba(232,96,46,0.25)] shrink-0" />
+                <div className="space-y-1.5 flex-1">
+                  <div className="w-56 h-5 bg-[var(--bg-elevated)] rounded" />
+                  <div className="w-32 h-3.5 bg-[var(--bg-elevated)] rounded" />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 mb-6">
+                <div className="w-28 h-6 bg-[var(--bg-elevated)] rounded-full" />
+                <div className="w-24 h-6 bg-[var(--bg-elevated)] rounded-full" />
+                <div className="w-36 h-6 bg-[var(--bg-elevated)] rounded-full" />
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-4 border-t border-[var(--border)]">
+              <div className="w-full h-3.5 bg-[var(--bg-elevated)] rounded" />
+              <div className="w-4/5 h-3.5 bg-[var(--bg-elevated)] rounded" />
+              <div className="w-3/5 h-3.5 bg-[var(--bg-elevated)] rounded" />
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Quick insights row: 4 cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-28 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px]" />
+            <div
+              key={i}
+              className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-5 flex flex-col justify-between h-32"
+            >
+              <div className="flex items-center justify-between">
+                <div className="w-8 h-8 rounded-[8px] bg-[var(--bg-elevated)]" />
+                <div className="w-14 h-4 bg-[var(--bg-elevated)] rounded-[4px]" />
+              </div>
+              <div>
+                <div className="w-16 h-7 bg-[var(--bg-elevated)] rounded mb-1.5" />
+                <div className="w-28 h-3.5 bg-[var(--bg-elevated)] rounded mb-1" />
+                <div className="w-36 h-2.5 bg-[var(--bg-elevated)] rounded" />
+              </div>
+            </div>
           ))}
         </div>
 
-        {/* Summary card skeleton */}
-        <div className="h-24 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px]" />
+        {/* 4. Summary card skeleton */}
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 space-y-3">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 rounded-[6px] bg-[rgba(232,96,46,0.12)] shrink-0" />
+            <div className="w-20 h-3.5 bg-[var(--bg-elevated)] rounded" />
+          </div>
+          <div className="w-full h-4 bg-[var(--bg-elevated)] rounded" />
+          <div className="w-11/12 h-4 bg-[var(--bg-elevated)] rounded" />
+          <div className="w-3/4 h-4 bg-[var(--bg-elevated)] rounded" />
+        </div>
 
-        {/* Section bars skeleton */}
+        {/* 5. Strengths and Improvements (2 columns) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Strengths card */}
+          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 space-y-3">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-2.5 h-2.5 rounded-full bg-[rgba(0,164,109,0.3)]" />
+              <div className="w-24 h-4 bg-[var(--bg-elevated)] rounded" />
+            </div>
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between p-3 rounded-[9px] bg-[var(--bg-page)] border border-[var(--border)]"
+              >
+                <div className="w-36 h-3.5 bg-[var(--bg-elevated)] rounded" />
+                <div className="w-20 h-5 bg-[var(--bg-elevated)] rounded-[4px]" />
+              </div>
+            ))}
+          </div>
+
+          {/* Improvements card */}
+          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 space-y-3">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-2.5 h-2.5 rounded-full bg-[rgba(255,155,0,0.3)]" />
+              <div className="w-28 h-4 bg-[var(--bg-elevated)] rounded" />
+            </div>
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between p-3 rounded-[9px] bg-[var(--bg-page)] border border-[var(--border)]"
+              >
+                <div className="w-36 h-3.5 bg-[var(--bg-elevated)] rounded" />
+                <div className="w-20 h-5 bg-[var(--bg-elevated)] rounded-[4px]" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 6. Section Bars (Dimension Breakdown) */}
         <div className="space-y-3">
+          <div className="mb-4">
+            <div className="w-28 h-3.5 bg-[var(--bg-elevated)] rounded mb-1.5" />
+            <div className="w-56 h-5 bg-[var(--bg-elevated)] rounded" />
+          </div>
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-20 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px]" />
+            <div
+              key={i}
+              className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-4 flex flex-col gap-2"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-[6px] bg-[var(--bg-elevated)]" />
+                  <div className="w-36 h-4 bg-[var(--bg-elevated)] rounded" />
+                  <div className="w-12 h-4 bg-[var(--bg-elevated)] rounded-full" />
+                </div>
+                <div className="w-16 h-5 bg-[var(--bg-elevated)] rounded" />
+              </div>
+              <div className="w-full h-2 rounded-full bg-[var(--bg-elevated)]" />
+            </div>
           ))}
+        </div>
+
+        {/* 7. Risks and Keyword Analysis Row */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+          {/* Risks Skeleton (md:col-span-6) */}
+          <div className="md:col-span-6 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 space-y-4">
+            <div className="w-32 h-3.5 bg-[var(--bg-elevated)] rounded" />
+            <div className="w-44 h-5 bg-[var(--bg-elevated)] rounded mb-4" />
+            {[...Array(2)].map((_, i) => (
+              <div
+                key={i}
+                className="p-4 rounded-[10px] bg-[var(--bg-elevated)] border border-[var(--border)] space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="w-40 h-4 bg-[var(--bg-card)] rounded" />
+                  <div className="w-16 h-4 bg-[var(--bg-card)] rounded-full" />
+                </div>
+                <div className="w-full h-3 bg-[var(--bg-card)] rounded" />
+                <div className="w-3/4 h-3 bg-[var(--bg-card)] rounded" />
+              </div>
+            ))}
+          </div>
+
+          {/* Keyword Analysis Skeleton (md:col-span-6) */}
+          <div className="md:col-span-6 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 space-y-5">
+            <div>
+              <div className="w-28 h-3.5 bg-[var(--bg-elevated)] rounded" />
+              <div className="w-40 h-5 bg-[var(--bg-elevated)] rounded mt-1" />
+            </div>
+
+            {/* Matched pills skeleton */}
+            <div>
+              <div className="w-32 h-3.5 bg-[var(--bg-elevated)] rounded mb-3" />
+              <div className="flex flex-wrap gap-2">
+                {[20, 24, 16, 28, 20, 32].map((w, i) => (
+                  <div
+                    key={i}
+                    className="h-6 rounded-full bg-[rgba(0,164,109,0.10)] border border-[rgba(0,164,109,0.20)]"
+                    style={{ width: `${w * 4}px` }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Missing pills skeleton */}
+            <div className="pt-4 border-t border-[var(--border)]">
+              <div className="w-32 h-3.5 bg-[var(--bg-elevated)] rounded mb-3" />
+              <div className="flex flex-wrap gap-2">
+                {[24, 20, 28, 16, 24].map((w, i) => (
+                  <div
+                    key={i}
+                    className="h-6 rounded-full bg-[rgba(255,155,0,0.10)] border border-[rgba(255,155,0,0.20)]"
+                    style={{ width: `${w * 4}px` }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -270,7 +444,7 @@ export default function ReportPage() {
 
   // Derive data points strictly as specified
   const overallScore = Math.max(0, Math.min(100, Math.round(Number(data.overallScore) || 0)));
-  const overallScoreInfo = getScoreDetails(data.statusLabel || overallScore);
+  const overallScoreInfo = getScoreDetails(overallScore);
   const tierLabel = data.statusLabel || overallScoreInfo.label;
 
   const rawSectionScores = Array.isArray(data.sectionScores) ? data.sectionScores : [];
@@ -306,8 +480,17 @@ export default function ReportPage() {
   const risks = Array.isArray(data.risks) ? data.risks : [];
   const highRisks = risks.filter((r) => String(r.severity).toUpperCase() === 'HIGH');
   const mediumRisks = risks.filter((r) => String(r.severity).toUpperCase() === 'MEDIUM');
+  const lowRisks = risks.filter((r) => String(r.severity).toUpperCase() === 'LOW');
   const highRiskCount = highRisks.length;
   const mediumRiskCount = mediumRisks.length;
+  const lowRiskCount = lowRisks.length;
+  const totalRiskCount = risks.length;
+
+  const riskBadge = highRiskCount > 0
+    ? { text: 'Action needed', color: '#ef4444' }
+    : mediumRiskCount > 0
+    ? { text: 'Review', color: '#fbc904' }
+    : { text: 'Clear', color: '#00a46d' };
 
   // Suggestions list
   const suggestions = Array.isArray(data.suggestions) ? data.suggestions : [];
@@ -331,12 +514,12 @@ export default function ReportPage() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+    <div className="w-full max-w-6xl xl:max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
       {/* 8.10 Action Buttons Row */}
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--text-secondary)]">
-            Report capability ID:
+            Report ID:
           </span>
           <span className="text-[11px] font-mono px-2 py-0.5 rounded-[6px] bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-secondary)] truncate max-w-[200px] sm:max-w-xs">
             {id}
@@ -403,6 +586,8 @@ export default function ReportPage() {
             tierLabel={tierLabel}
             size={180}
             showLabel={true}
+            scoreCapped={data.scoreCapped}
+            uncappedScore={data.uncappedScore}
           />
         </div>
 
@@ -443,17 +628,16 @@ export default function ReportPage() {
               ? `${Math.round((matchedKeywords.length / totalKeywords) * 100)}%`
               : `${Math.round(data.keywordMatchPercent || 0)}%`
           }
-          badgeColor="var(--success)"
           icon={Cpu}
         />
 
-        {/* Card 3: High and medium risk counts */}
+        {/* Card 3: Compliance risks counts */}
         <InsightCard
           title="Compliance Risks"
-          value={highRiskCount + mediumRiskCount}
-          subtext={`${highRiskCount} high, ${mediumRiskCount} medium severity`}
-          badgeText={highRiskCount > 0 ? `${highRiskCount} High` : 'Clear'}
-          badgeColor={highRiskCount > 0 ? 'var(--danger)' : 'var(--success)'}
+          value={totalRiskCount}
+          subtext={`${highRiskCount} high, ${mediumRiskCount} medium, ${lowRiskCount} low`}
+          badgeText={riskBadge.text}
+          badgeColor={riskBadge.color}
           icon={AlertTriangle}
         />
 
@@ -475,6 +659,7 @@ export default function ReportPage() {
         sectionScores={enrichedSections}
         highRiskCount={highRiskCount}
         missingKeywordCount={missingKeywords.length}
+        scoreCapped={data.scoreCapped}
       />
 
       {/* 8.4 Strengths and Improvements */}

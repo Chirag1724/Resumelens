@@ -234,21 +234,22 @@ Original copy specified below must be preserved verbatim.
 Rendered in the exact sequential order listed below:
 
 ### 8.1 Top Row
-- **ScoreGauge Card**: Displays the overall calculated score (0 to 100) and the corresponding score tier label.
+- **ScoreGauge Card**: Displays the overall calculated score (0 to 100) and the corresponding score tier label. When scoreCapped is true, displays one line under the gauge: "Score limited because the job match is low. Without the limit: {uncappedScore}".
 - **File Info Card**: Displays `fileName`, scan date (`analyzedAt`), `targetRole`, and `experienceYears`. Any missing optional values are hidden cleanly.
 
 ### 8.2 Quick Insights Row
 Four cards populated strictly from backend API response data:
 1. Overall score tier label.
-2. Keywords matched versus total extracted, accompanied by missing keywords count.
-3. High and medium risk counts combined/categorized.
+2. Keywords matched versus total extracted, accompanied by missing keywords count. Percentage badge displayed in neutral color.
+3. Total compliance risks count, severity breakdown ("X high, Y medium, Z low"), and status badge ("Action needed" for HIGH, "Review" for MEDIUM, "Clear" when no HIGH or MEDIUM risks exist).
 4. Weakest scoring section name and its numerical score.
 
 ### 8.3 Summary Card
-Constructed strictly using this deterministic sentence template (no synthesized or fabricated copy):
+Constructed strictly using this sentence template (no synthesized or fabricated copy):
 > `"Your resume scored {score} out of 100, rated {tier}. Strongest area: {name} ({score}). Weakest area: {name} ({score}). {n} high severity risks and {m} missing keywords were found."`
 - Proper pluralization applied: `"1 high severity risk"` vs `"{n} high severity risks"`, and `"1 missing keyword"` vs `"{m} missing keywords"`.
 - When `{n}` equals 0, the risk phrase is replaced with: `"No high severity risks were found."`.
+- When `scoreCapped` is true, appends the sentence: `"The overall score is limited because the job match is low."`.
 
 ### 8.4 Strengths and Improvements
 Derived directly from the six section scores:

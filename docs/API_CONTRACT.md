@@ -236,6 +236,8 @@ All analysis and report retrieval endpoints use unguessable UUIDs as public capa
     "experienceYears": 5,
     "overallScore": 78.45,
     "statusLabel": "Strong Match",
+    "uncappedScore": 78.45,
+    "scoreCapped": false,
     "atsScore": 82.0,
     "skillsScore": 75.5,
     "impactScore": 80.0,
@@ -328,8 +330,10 @@ All analysis and report retrieval endpoints use unguessable UUIDs as public capa
 | `analyzedAt` | `LocalDateTime (ISO-8601)` | Timestamp | Timestamp when the analysis was performed |
 | `targetRole` | `String` | Text / `null` | Target role provided during upload (`null` when absent) |
 | `experienceYears` | `Integer` | Integer / `null` | Candidate experience in years provided during upload (`null` when absent) |
-| `overallScore` | `Double` | `0.00` - `100.00` | Weighted aggregate score |
-| `statusLabel` | `String` | `"Excellent Match"` \| `"Strong Match"` \| `"Moderate Match"` \| `"Weak Match"` \| `"Poor Match"` | Qualitative score tier |
+| `overallScore` | `Double` | `0.00` - `100.00` | Weighted aggregate score, capped based on Skills Validation score |
+| `statusLabel` | `String` | `"Excellent Match"` \| `"Strong Match"` \| `"Moderate Match"` \| `"Weak Match"` \| `"Poor Match"` | Qualitative score tier derived from capped overall score |
+| `uncappedScore` | `Double` | `0.00` - `100.00` | Plain weighted sum of six dimension scores rounded to 2 decimal places |
+| `scoreCapped` | `Boolean` | `true` \| `false` | True only when the job fit cap lowered the overall score |
 | `atsScore` | `Double` | `0.0` - `100.0` | ATS formatting dimension score (25%) |
 | `skillsScore` | `Double` | `0.0` - `100.0` | TF-IDF + Cosine similarity skill score (25%) |
 | `impactScore` | `Double` | `0.0` - `100.0` | Quantified achievements score (20%) |
@@ -347,7 +351,7 @@ All analysis and report retrieval endpoints use unguessable UUIDs as public capa
 |:---|:---|:---|:---|
 | `title` | `String` | Text | Human-readable title of the fired rule |
 | `severity` | `String` | `"HIGH"` \| `"MEDIUM"` \| `"LOW"` | Derived from deduction size: >=15 is HIGH, 8–14 is MEDIUM, <8 is LOW |
-| `description` | `String` | Plain sentence | Short description explaining the risk (no dynamic numbers) |
+| `description` | `String` | Plain sentence | Short description explaining the risk (for Repeated Words, ends with "Words used more than 5 times: word1 (count1), word2 (count2)." for up to 5 words ordered by count descending then alphabetically) |
 | `fix` | `String` | Plain sentence | Actionable guidance explaining how to resolve the risk |
 
 #### Error Status Codes
@@ -368,7 +372,7 @@ All analysis and report retrieval endpoints use unguessable UUIDs as public capa
 | `id` | `UUID (String)` | Yes | Public capability UUID of the match result to fetch |
 
 #### Success Response (`200 OK`)
-Returns `ApiResponse<AnalysisResponse>` with identical structure and contents as `POST /api/v1/analysis/match` (metadata fields `fileName`, `analyzedAt`, `targetRole`, and `experienceYears` return identical values; suggestions and risks are deterministically recomputed from the persisted resume and job description).
+Returns `ApiResponse<AnalysisResponse>` with identical structure and contents as `POST /api/v1/analysis/match` (metadata fields `fileName`, `analyzedAt`, `targetRole`, and `experienceYears` return identical values; `uncappedScore` is computed from the stored six section scores with the same weights; `scoreCapped` is derived as `overallScore < uncappedScore`; suggestions and risks are deterministically recomputed from the persisted resume and job description).
 
 #### Error Status Codes
 - `400 Bad Request`: Invalid UUID format.

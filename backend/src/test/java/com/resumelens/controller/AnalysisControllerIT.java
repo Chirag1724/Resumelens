@@ -418,5 +418,105 @@ class AnalysisControllerIT {
                 .andExpect(status().isForbidden())
                 .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
     }
+
+    // Test (g): POST and GET return the same uncappedScore and scoreCapped
+
+    @Test
+    void should_returnSameUncappedScoreAndScoreCappedInGetAsInPostMatch() throws Exception {
+        String matchBody = mockMvc.perform(post("/api/v1/analysis/match")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestData.matchJson(resumeId, SAMPLE_JD, "Software Engineer")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode postData = mapper.readTree(matchBody).path("data");
+        String idStr = postData.path("id").asText();
+        UUID id = UUID.fromString(idStr);
+
+        String getBody = mockMvc.perform(get("/api/v1/analysis/{id}", id))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode getData = mapper.readTree(getBody).path("data");
+
+        assertFalse(postData.path("uncappedScore").isMissingNode());
+        assertFalse(postData.path("scoreCapped").isMissingNode());
+        assertFalse(getData.path("uncappedScore").isMissingNode());
+        assertFalse(getData.path("scoreCapped").isMissingNode());
+
+        assertEquals(postData.path("uncappedScore").asDouble(), getData.path("uncappedScore").asDouble(), 1e-9,
+                "GET uncappedScore must equal POST uncappedScore");
+        assertEquals(postData.path("scoreCapped").asBoolean(), getData.path("scoreCapped").asBoolean(),
+                "GET scoreCapped must equal POST scoreCapped");
+
+        // Test with strong resume against mismatched JD where score is capped at 54.0
+        MockMultipartFile strongFile = new MockMultipartFile(
+                "file", "strong.pdf", "application/pdf", buildStrongResumePdf());
+        String strongUploadBody = mockMvc.perform(multipart("/api/v1/resumes/upload").file(strongFile))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        UUID strongResumeId = UUID.fromString(mapper.readTree(strongUploadBody).path("data").path("resumeId").asText());
+
+        String mlJd = "Machine Learning Engineer with deep learning, PyTorch, TensorFlow, computer vision, NLP, linear algebra, statistics, and MLOps.";
+        String cappedMatchBody = mockMvc.perform(post("/api/v1/analysis/match")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestData.matchJson(strongResumeId, mlJd, "ML Engineer")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode cappedPostData = mapper.readTree(cappedMatchBody).path("data");
+        String cappedIdStr = cappedPostData.path("id").asText();
+        UUID cappedId = UUID.fromString(cappedIdStr);
+
+        String cappedGetBody = mockMvc.perform(get("/api/v1/analysis/{id}", cappedId))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode cappedGetData = mapper.readTree(cappedGetBody).path("data");
+
+        assertTrue(cappedPostData.path("scoreCapped").asBoolean(), "POST scoreCapped must be true for mismatched JD");
+        assertTrue(cappedGetData.path("scoreCapped").asBoolean(), "GET scoreCapped must be true for mismatched JD");
+        assertEquals(cappedPostData.path("uncappedScore").asDouble(), cappedGetData.path("uncappedScore").asDouble(), 1e-9,
+                "GET uncappedScore must equal POST uncappedScore for capped result");
+        assertEquals(cappedPostData.path("overallScore").asDouble(), cappedGetData.path("overallScore").asDouble(), 1e-9,
+                "GET overallScore must equal POST overallScore for capped result");
+        assertEquals(54.0, cappedPostData.path("overallScore").asDouble(), 0.01,
+                "Capped overallScore must equal 54.0 literal");
+    }
+
+    static byte[] buildStrongResumePdf() throws Exception {
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        try (org.apache.pdfbox.pdmodel.PDDocument doc = new org.apache.pdfbox.pdmodel.PDDocument()) {
+            org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage();
+            doc.addPage(page);
+            try (org.apache.pdfbox.pdmodel.PDPageContentStream cs = new org.apache.pdfbox.pdmodel.PDPageContentStream(doc, page)) {
+                cs.beginText();
+                cs.setFont(new org.apache.pdfbox.pdmodel.font.PDType1Font(org.apache.pdfbox.pdmodel.font.Standard14Fonts.FontName.HELVETICA), 10);
+                cs.newLineAtOffset(50, 700);
+                String[] lines = {
+                        "Jane Doe",
+                        "jane.doe@example.com 555-123-4567",
+                        "EDUCATION",
+                        "Bachelor of Computer Science 2020",
+                        "EXPERIENCE",
+                        "- Spearheaded development achieving 50% performance improvement",
+                        "- Deployed cloud infrastructure saving $100k",
+                        "PROJECTS",
+                        "E-Commerce Platform",
+                        "Java React deployed to 100k users achieving high throughput",
+                        "SKILLS",
+                        "Java React Spring Boot MySQL"
+                };
+                for (String line : lines) {
+                    cs.showText(line);
+                    cs.newLineAtOffset(0, -14);
+                }
+                cs.endText();
+            }
+            doc.save(baos);
+        }
+        return baos.toByteArray();
+    }
 }
+
 

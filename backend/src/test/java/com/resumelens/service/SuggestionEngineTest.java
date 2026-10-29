@@ -126,11 +126,21 @@ class SuggestionEngineTest {
     }
 
     @Test
-    void should_generateLowPrioritySuggestion_whenOverallScoreIsBelow55() {
-        List<SuggestionResponse> suggestions = engine.generateTopSuggestions(List.of(), List.of(), List.of(), 40.0);
+    void should_notGenerateStructureSuggestion_whenAtsCompatibilityScoreIs85EvenIfOverallCappedTo54() {
+        // ATS Compatibility is 85 (>= 70): no structure suggestion regardless of capped overall score
+        List<SuggestionResponse> suggestions = engine.generateTopSuggestions(List.of(), List.of(), List.of(), 85.0);
 
-        assertTrue(suggestions.stream().anyMatch(s -> "LOW".equals(s.priority())),
-                "Overall score < 55 must produce a LOW priority structure suggestion");
+        assertFalse(suggestions.stream().anyMatch(s -> "Review overall resume structure".equals(s.title())),
+                "ATS Compatibility 85 must not produce 'Review overall resume structure' suggestion");
+    }
+
+    @Test
+    void should_generateStructureSuggestion_whenAtsCompatibilityScoreIs60() {
+        // ATS Compatibility is 60 (< 70): structure suggestion appears
+        List<SuggestionResponse> suggestions = engine.generateTopSuggestions(List.of(), List.of(), List.of(), 60.0);
+
+        assertTrue(suggestions.stream().anyMatch(s -> "Review overall resume structure".equals(s.title())),
+                "ATS Compatibility 60 must produce 'Review overall resume structure' suggestion");
     }
 
     @Test
@@ -139,5 +149,35 @@ class SuggestionEngineTest {
         List<SuggestionResponse> suggestions = engine.generateTopSuggestions(List.of(), List.of(), List.of(), 90.0);
         assertTrue(suggestions.isEmpty(),
                 "Perfect resume with no issues must produce zero suggestions");
+    }
+
+    @Test
+    void should_ensureSuggestionCountOfBulletsLackingNumbersEqualsUnquantifiedBulletCount() {
+        // Resume with 4 bullets:
+        // - Bullet 1: 6000+ (quantified via number with +)
+        // - Bullet 2: 200 teams (quantified via 2+ digit number)
+        // - Bullet 3: ESP32 (unquantified - glued to letters)
+        // - Bullet 4: v5 release in 2nd phase (unquantified - glued to letters)
+        String resume = "• Achieved 6000+ user registrations across platforms\n" +
+                "• Led 200 teams across all regional operations\n" +
+                "• Developed ESP32 microcontroller firmware\n" +
+                "• Deployed v5 release in 2nd testing phase";
+
+        List<String> unquantified = engine.checkQuantification(resume);
+
+        // Hand-computed literal: 2 unquantified bullets (ESP32 and v5/2nd)
+        assertEquals(2, unquantified.size(),
+                "Exactly 2 bullets lack a standalone number");
+        assertTrue(unquantified.stream().anyMatch(b -> b.contains("ESP32")));
+        assertTrue(unquantified.stream().anyMatch(b -> b.contains("v5")));
+
+        List<SuggestionResponse> suggestions = engine.generateTopSuggestions(List.of(), List.of(), unquantified, 80.0);
+        SuggestionResponse quantSuggestion = suggestions.stream()
+                .filter(s -> s.title().contains("Quantify"))
+                .findFirst().orElseThrow();
+
+        // The suggestion description must state the literal count 2
+        assertTrue(quantSuggestion.description().startsWith("2 bullet point(s) lack measurable outcomes."),
+                "Suggestion count of bullets lacking numbers must equal the number of bullets without a standalone number");
     }
 }

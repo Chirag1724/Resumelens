@@ -6,13 +6,10 @@ import com.resumelens.dto.response.SuggestionResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 public class SuggestionEngine {
-
-    private static final int LEVENSHTEIN_THRESHOLD = 2;
 
     private static final Map<String, String> WEAK_VERB_REPLACEMENTS = Map.of(
         "worked on",        "led / built / delivered",
@@ -22,25 +19,24 @@ public class SuggestionEngine {
         "participated in",  "contributed to / spearheaded"
     );
 
-    // Regex that finds a bullet point lacking any digit
-    private static final Pattern BULLET_NO_NUMBER =
-        Pattern.compile("^[-–•*]\\s+(?!.*\\d).+$", Pattern.MULTILINE);
-
     private final SimilarityCalculator similarity;
+    private final TfIdfCalculator tfidf;
 
     public SuggestionEngine(SimilarityCalculator similarity) {
-        this.similarity = similarity;
+        this(similarity, new TfIdfCalculator());
     }
 
-    /** Keywords present in JD but absent from resume (exact or fuzzy). */
+    @org.springframework.beans.factory.annotation.Autowired
+    public SuggestionEngine(SimilarityCalculator similarity, TfIdfCalculator tfidf) {
+        this.similarity = similarity;
+        this.tfidf = tfidf;
+    }
+
+    /** Keywords present in JD but absent from resume per SCORING_RULES.md. */
     public List<String> findMissingKeywords(String resumeText, String jdText) {
-        List<String> jdTokens = List.of(TfIdfCalculator.tokenize(jdText));
-        Set<String> resumeTokens = Set.of(TfIdfCalculator.tokenize(resumeText));
-        return jdTokens.stream()
-            .distinct()
-            .filter(kw -> kw.length() > 2)
-            .filter(kw -> resumeTokens.stream()
-                .noneMatch(rt -> rt.equals(kw) || similarity.isFuzzyMatch(rt, kw, LEVENSHTEIN_THRESHOLD)))
+        List<String> jdKeywords = tfidf.topKeywords(jdText, 30);
+        return jdKeywords.stream()
+            .filter(kw -> !similarity.isKeywordMatched(kw, resumeText))
             .collect(Collectors.toList());
     }
 
@@ -65,11 +61,29 @@ public class SuggestionEngine {
         return findings;
     }
 
-    /** Returns bullet-point lines that contain no numeric metric. */
+    /** Returns bullet-point lines that contain no standalone number metric. */
     public List<String> checkQuantification(String resumeText) {
-        return BULLET_NO_NUMBER.matcher(resumeText).results()
-            .map(mr -> mr.group().trim())
-            .collect(Collectors.toList());
+        String[] lines = resumeText.split("\n");
+        long dashCount = 0;
+        long enDashCount = 0;
+        for (String line : lines) {
+            String trimmed = line.stripLeading();
+            if (trimmed.startsWith("- ")) dashCount++;
+            if (trimmed.startsWith("– ")) enDashCount++;
+        }
+        boolean dashIsMarker = dashCount >= 2;
+        boolean enDashIsMarker = enDashCount >= 2;
+
+        List<String> unquantified = new ArrayList<>();
+        for (String line : lines) {
+            String trimmed = line.stripLeading();
+            if (ATSScoreEngine.isBulletLine(trimmed, dashIsMarker, enDashIsMarker)) {
+                if (!ATSScoreEngine.isQuantified(trimmed)) {
+                    unquantified.add(trimmed.trim());
+                }
+            }
+        }
+        return unquantified;
     }
 
     /**
@@ -82,7 +96,7 @@ public class SuggestionEngine {
             List<String> missingKeywords,
             List<String> weakVerbLines,
             List<String> unquantifiedBullets,
-            double overallScore) {
+            double atsScore) {
 
         List<SuggestionResponse> suggestions = new ArrayList<>();
 
@@ -117,11 +131,11 @@ public class SuggestionEngine {
             ));
         }
 
-        if (overallScore < 55) {
+        if (atsScore < 70) {
             suggestions.add(new SuggestionResponse(
                 "LOW",
                 "Review overall resume structure",
-                "Your overall ATS score is below the Moderate Match threshold. "
+                "Your ATS Compatibility score is below the Strong Match threshold. "
                     + "Ensure standard section headings (Education, Experience, Skills) are present "
                     + "and contact information is clearly visible.",
                 "Standard headings: EXPERIENCE, EDUCATION, SKILLS, PROJECTS"

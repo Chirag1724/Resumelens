@@ -109,7 +109,7 @@ export function ReportPage() {
           Report placeholder for analysis UUID: <code className="text-[var(--text)] font-mono">{id}</code>
         </p>
         <p className="text-xs text-[var(--text-tertiary)]">
-          Possession of this unguessable UUID grants capability read access under the public guest model.
+          Possession of this unguessable UUID grants read access under the public guest model.
         </p>
       </div>
     </div>

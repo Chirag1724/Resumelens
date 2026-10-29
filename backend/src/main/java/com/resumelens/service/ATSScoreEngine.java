@@ -1,5 +1,6 @@
 package com.resumelens.service;
 
+import com.resumelens.algorithm.SkillDictionary;
 import com.resumelens.algorithm.SimilarityCalculator;
 import com.resumelens.algorithm.TfIdfCalculator;
 import com.resumelens.dto.response.RiskResponse;
@@ -26,15 +27,12 @@ public class ATSScoreEngine {
     static final double WEIGHT_WRITING       = 0.10;
     static final double WEIGHT_PROFESSIONAL  = 0.05;
 
-    // Levenshtein threshold
-    static final int LEVENSHTEIN_THRESHOLD   = 2;
-
     // Keyword cap
     static final int MAX_JD_KEYWORDS         = 30;
 
     // Standard section headings
     private static final List<String> REQUIRED_SECTIONS =
-        List.of("education", "experience", "skills");
+        List.of("EDUCATION", "EXPERIENCE", "SKILLS");
 
     // Action verb list (SCORING_RULES.md & Impact & Achievements)
     private static final Set<String> ACTION_VERBS = Set.of(
@@ -55,14 +53,66 @@ public class ATSScoreEngine {
     private static final Pattern FIRST_PERSON =
         Pattern.compile("\\b(i|me|my|we|our)\\b", Pattern.CASE_INSENSITIVE);
 
-    // Tech keyword list for project quality check
-    private static final Set<String> TECH_KEYWORDS = Set.of(
-        "java","python","javascript","typescript","react","angular","vue","spring",
-        "django","flask","node","express","mysql","postgresql","mongodb","redis",
-        "docker","kubernetes","aws","azure","gcp","git","kafka","rabbitmq","rest",
-        "graphql","microservices","ci","cd","linux","html","css","android","ios",
-        "swift","kotlin","c++","rust","go","terraform","jenkins"
+    // Tech keyword list for project quality check loaded from skills.txt
+    private static final Set<String> TECH_KEYWORDS = SkillDictionary.getSkills();
+
+    // Skills set including individual tokens for repetition exclusion
+    private static final Set<String> REPETITION_EXCLUDED_SKILLS = buildRepetitionExcludedSkills();
+
+    private static Set<String> buildRepetitionExcludedSkills() {
+        Set<String> set = new HashSet<>(SkillDictionary.getSkills());
+        for (String skill : SkillDictionary.getSkills()) {
+            for (String token : TfIdfCalculator.tokenize(skill)) {
+                if (!token.isBlank()) {
+                    set.add(token);
+                }
+            }
+        }
+        return Collections.unmodifiableSet(set);
+    }
+
+    public static final Pattern QUANTIFIED_PATTERN = Pattern.compile(
+        "(?<![a-zA-Z])(?:\\d+\\s*[%+]|\\d+\\s*[xXkKmMbB](?![a-zA-Z])|\\d{2,}(?![a-zA-Z]))"
     );
+
+    public static boolean isQuantified(String text) {
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+        return QUANTIFIED_PATTERN.matcher(text).find();
+    }
+
+    public static boolean isBulletLine(String line, boolean dashIsMarker, boolean enDashIsMarker) {
+        String trimmed = line.stripLeading();
+        if (trimmed.startsWith("•") || trimmed.startsWith("●")
+                || trimmed.startsWith("▪") || trimmed.startsWith("◦")) {
+            return true;
+        }
+        if (trimmed.startsWith("* ") || trimmed.startsWith("*\t")
+                || (trimmed.startsWith("*") && !trimmed.startsWith("**"))) {
+            return true;
+        }
+        if (dashIsMarker && trimmed.startsWith("- ")) {
+            return true;
+        }
+        if (enDashIsMarker && trimmed.startsWith("– ")) {
+            return true;
+        }
+        return false;
+    }
+
+    public static String getBulletMarkerStyle(String line, boolean dashIsMarker, boolean enDashIsMarker) {
+        String trimmed = line.stripLeading();
+        if (trimmed.startsWith("•")) return "•";
+        if (trimmed.startsWith("●")) return "●";
+        if (trimmed.startsWith("▪")) return "▪";
+        if (trimmed.startsWith("◦")) return "◦";
+        if (trimmed.startsWith("* ") || trimmed.startsWith("*\t")
+                || (trimmed.startsWith("*") && !trimmed.startsWith("**"))) return "*";
+        if (dashIsMarker && trimmed.startsWith("- ")) return "-";
+        if (enDashIsMarker && trimmed.startsWith("– ")) return "–";
+        return null;
+    }
 
     // Result-oriented keywords for project outcome check
     private static final Set<String> OUTCOME_WORDS = Set.of(
@@ -189,9 +239,14 @@ public class ATSScoreEngine {
     }
 
     private void recordRisk(List<RiskResponse> risks, String ruleKey, double deduction) {
+        recordRisk(risks, ruleKey, deduction, null);
+    }
+
+    private void recordRisk(List<RiskResponse> risks, String ruleKey, double deduction, String customDescription) {
         RiskDefinition def = RISK_DEFINITIONS.get(ruleKey);
         if (def != null) {
-            risks.add(new RiskResponse(def.title(), severityFromDeduction(deduction), def.description(), def.fix()));
+            String desc = customDescription != null ? customDescription : def.description();
+            risks.add(new RiskResponse(def.title(), severityFromDeduction(deduction), desc, def.fix()));
         }
     }
 
@@ -211,17 +266,18 @@ public class ATSScoreEngine {
     public ScoreResult score(String resumeText, String jdText,
                              boolean hasFormattingRisk, boolean hasGraphicsRisk) {
 
+        Map<String, String> sections = resumeParser.extractSections(resumeText);
         List<String> jdKeywords = tfidf.topKeywords(jdText, MAX_JD_KEYWORDS);
         List<RiskResponse> risks = new ArrayList<>();
 
-        double ats     = round(calcAts(resumeText, jdText, jdKeywords, hasFormattingRisk, hasGraphicsRisk, risks));
+        double ats     = round(calcAts(resumeText, jdText, jdKeywords, hasFormattingRisk, hasGraphicsRisk, risks, sections));
         double skills  = round(calcSkills(resumeText, jdText, jdKeywords));
         double impact  = round(calcImpact(resumeText));
-        double project = round(calcProject(resumeText));
+        double project = round(calcProject(sections));
         double writing = round(calcWriting(resumeText, risks));
         double professionalism = round(calcProfessionalism(resumeText, risks));
 
-        double overall = round(
+        double uncapped = round(
             ats    * WEIGHT_ATS    +
             skills * WEIGHT_SKILLS +
             impact * WEIGHT_IMPACT +
@@ -230,18 +286,22 @@ public class ATSScoreEngine {
             professionalism * WEIGHT_PROFESSIONAL
         );
 
+        CapResult capResult = applyScoreCap(uncapped, skills);
+        double overall = capResult.cappedScore();
+        boolean scoreCapped = capResult.scoreCapped();
+
         double keywordMatchPercent = round(calcKeywordMatchPercent(resumeText, jdKeywords));
 
         List<String> matched = jdKeywords.stream()
-            .filter(kw -> isMatchedInResume(kw, resumeText))
+            .filter(kw -> similarity.isKeywordMatched(kw, resumeText))
             .collect(Collectors.toList());
         List<String> missing = jdKeywords.stream()
-            .filter(kw -> !isMatchedInResume(kw, resumeText))
+            .filter(kw -> !similarity.isKeywordMatched(kw, resumeText))
             .collect(Collectors.toList());
 
         risks.sort(Comparator.comparingInt(r -> severityRank(r.severity())));
 
-        return new ScoreResult(overall, ats, skills, impact, project, writing,
+        return new ScoreResult(overall, uncapped, scoreCapped, ats, skills, impact, project, writing,
                                professionalism, statusLabel(overall),
                                keywordMatchPercent, matched, missing, List.copyOf(risks));
     }
@@ -255,13 +315,12 @@ public class ATSScoreEngine {
     // 1. ATS Compatibility (SCORING_RULES.md)
     private double calcAts(String resumeText, String jdText, List<String> jdKeywords,
                            boolean hasFormattingRisk, boolean hasGraphicsRisk,
-                           List<RiskResponse> risks) {
+                           List<RiskResponse> risks, Map<String, String> sections) {
         double score = 100.0;
 
-        // Missing standard section headings (–8 per, max –24)
-        String lower = resumeText.toLowerCase(Locale.ROOT);
+        // Missing standard section headings (-8 per, max -24)
         long missingSections = REQUIRED_SECTIONS.stream()
-            .filter(s -> !lower.contains(s))
+            .filter(s -> !sections.containsKey(s))
             .count();
         if (missingSections > 0) {
             double deduction = Math.min(missingSections * 8.0, 24.0);
@@ -297,8 +356,8 @@ public class ATSScoreEngine {
             recordRisk(risks, "KEYWORD_DENSITY_30_TO_50", 8.0);
         }
 
-        // No measurable achievements (–5)
-        if (!hasMeasurableAchievements(resumeText)) {
+        // No measurable achievements (-5)
+        if (!isQuantified(resumeText)) {
             score -= 5;
             recordRisk(risks, "NO_MEASURABLE_ACHIEVEMENTS", 5.0);
         }
@@ -311,7 +370,7 @@ public class ATSScoreEngine {
         if (jdKeywords.isEmpty()) return 0.0;
 
         long matched = jdKeywords.stream()
-            .filter(kw -> isMatchedInResume(kw, resumeText))
+            .filter(kw -> similarity.isKeywordMatched(kw, resumeText))
             .count();
         double base = ((double) matched / jdKeywords.size()) * 100.0;
 
@@ -328,11 +387,20 @@ public class ATSScoreEngine {
     // 3. Impact & Achievements (SCORING_RULES.md)
     private double calcImpact(String resumeText) {
         String[] lines = resumeText.split("\n");
+        long dashCount = 0;
+        long enDashCount = 0;
+        for (String line : lines) {
+            String trimmed = line.stripLeading();
+            if (trimmed.startsWith("- ")) dashCount++;
+            if (trimmed.startsWith("– ")) enDashCount++;
+        }
+        boolean dashIsMarker = dashCount >= 2;
+        boolean enDashIsMarker = enDashCount >= 2;
+
         long totalBullets = 0, impactBullets = 0;
         for (String line : lines) {
-            String trimmed = line.trim();
-            if (trimmed.startsWith("-") || trimmed.startsWith("–")
-                    || trimmed.startsWith("•") || trimmed.startsWith("*")) {
+            String trimmed = line.stripLeading();
+            if (isBulletLine(trimmed, dashIsMarker, enDashIsMarker)) {
                 totalBullets++;
                 if (hasNumericValue(trimmed) || hasActionVerb(trimmed)) {
                     impactBullets++;
@@ -351,15 +419,14 @@ public class ATSScoreEngine {
     }
 
     // 4. Project Quality (SCORING_RULES.md)
-    private double calcProject(String resumeText) {
-        Map<String, String> sections = resumeParser.extractSections(resumeText);
+    private double calcProject(Map<String, String> sections) {
         String projectsSection = sections.entrySet().stream()
             .filter(e -> e.getKey().contains("PROJECT"))
             .map(e -> e.getValue())
             .findFirst().orElse(null);
 
         if (projectsSection == null || projectsSection.isBlank()) {
-            return 50.0;  // neutral, not penalised — SCORING_RULES.md §4
+            return 50.0;  // neutral, not penalised - SCORING_RULES.md §4
         }
 
         // Split into individual project blocks (separated by blank lines)
@@ -427,18 +494,40 @@ public class ATSScoreEngine {
             recordRisk(risks, "FILLER_WORDS", deduction);
         }
 
-        // Repetition (–5 per over-repeated word, max –15)
+        // Repetition (-5 per over-repeated word, max -15)
+        Set<String> genericWords = TfIdfCalculator.GENERIC_WORDS;
         Map<String, Long> freq = Arrays.stream(TfIdfCalculator.tokenize(resumeText))
-            .filter(w -> w.length() > 2 && !STOPWORDS.contains(w))
+            .filter(w -> w.length() >= 4 && !STOPWORDS.contains(w)
+                    && !REPETITION_EXCLUDED_SKILLS.contains(w)
+                    && !genericWords.contains(w))
             .collect(Collectors.groupingBy(w -> w, Collectors.counting()));
         long repeatedWordCount = freq.values().stream().filter(v -> v > 5).count();
         if (repeatedWordCount > 0) {
             double deduction = Math.min(repeatedWordCount * 5.0, 15.0);
             score -= deduction;
-            recordRisk(risks, "REPEATED_WORDS", deduction);
+
+            List<Map.Entry<String, Long>> repeatedEntries = freq.entrySet().stream()
+                .filter(e -> e.getValue() > 5)
+                .sorted((e1, e2) -> {
+                    int cmp = Long.compare(e2.getValue(), e1.getValue());
+                    if (cmp != 0) return cmp;
+                    return e1.getKey().compareTo(e2.getKey());
+                })
+                .limit(5)
+                .collect(Collectors.toList());
+
+            String wordsSummary = repeatedEntries.stream()
+                .map(e -> e.getKey() + " (" + e.getValue() + ")")
+                .collect(Collectors.joining(", "));
+
+            RiskDefinition def = RISK_DEFINITIONS.get("REPEATED_WORDS");
+            String customDesc = (def != null ? def.description() : "Certain words appear excessively throughout the resume text.")
+                + " Words used more than 5 times: " + wordsSummary + ".";
+
+            recordRisk(risks, "REPEATED_WORDS", deduction, customDesc);
         }
 
-        // Passive voice ratio > 40% (–10)
+        // Passive voice ratio > 40% (-10)
         long passiveCount = Arrays.stream(sentences)
             .filter(s -> PASSIVE_PATTERN.matcher(s).find())
             .count();
@@ -469,7 +558,7 @@ public class ATSScoreEngine {
             recordRisk(risks, "SPELLING_ERRORS", deduction);
         }
 
-        // Inconsistent date formatting (–10)
+        // Inconsistent date formatting (-10)
         boolean hasAlpha   = DATE_ALPHA.matcher(resumeText).find();
         boolean hasNumeric = DATE_NUMERIC.matcher(resumeText).find();
         if (hasAlpha && hasNumeric) {
@@ -477,22 +566,37 @@ public class ATSScoreEngine {
             recordRisk(risks, "INCONSISTENT_DATES", 10.0);
         }
 
-        // Inconsistent bullet style (–5)
-        boolean hasDash  = resumeText.contains("- ");
-        boolean hasBullet = resumeText.contains("• ");
-        boolean hasStar   = resumeText.contains("* ");
-        if ((hasDash ? 1 : 0) + (hasBullet ? 1 : 0) + (hasStar ? 1 : 0) > 1) {
+        // Inconsistent bullet style (-5)
+        String[] lines = resumeText.split("\n");
+        long dashCount = 0;
+        long enDashCount = 0;
+        for (String line : lines) {
+            String trimmed = line.stripLeading();
+            if (trimmed.startsWith("- ")) dashCount++;
+            if (trimmed.startsWith("– ")) enDashCount++;
+        }
+        boolean dashIsMarker = dashCount >= 2;
+        boolean enDashIsMarker = enDashCount >= 2;
+
+        Set<String> usedBulletStyles = new HashSet<>();
+        for (String line : lines) {
+            String style = getBulletMarkerStyle(line, dashIsMarker, enDashIsMarker);
+            if (style != null) {
+                usedBulletStyles.add(style);
+            }
+        }
+        if (usedBulletStyles.size() > 1) {
             score -= 5;
             recordRisk(risks, "INCONSISTENT_BULLETS", 5.0);
         }
 
-        // Casual email address (–10)
+        // Casual email address (-10)
         if (CASUAL_EMAIL.matcher(resumeText).find()) {
             score -= 10;
             recordRisk(risks, "CASUAL_EMAIL", 10.0);
         }
 
-        // Resume length > 700 words estimated as > 2 pages (–5)
+        // Resume length > 700 words estimated as > 2 pages (-5)
         long wordCount = Arrays.stream(resumeText.split("\\s+")).filter(w -> !w.isBlank()).count();
         if (wordCount > 700) {
             score -= 5;
@@ -514,23 +618,14 @@ public class ATSScoreEngine {
     }
 
     // Helpers
-    private boolean isMatchedInResume(String keyword, String resumeText) {
-        String lower = resumeText.toLowerCase(Locale.ROOT);
-        if (lower.contains(keyword.toLowerCase(Locale.ROOT))) return true;
-        // Fuzzy match: split resume into tokens and check each
-        return Arrays.stream(TfIdfCalculator.tokenize(resumeText))
-            .anyMatch(token -> similarity.isFuzzyMatch(token, keyword, LEVENSHTEIN_THRESHOLD));
+    public boolean isMatchedInResume(String keyword, String resumeText) {
+        return similarity.isKeywordMatched(keyword, resumeText);
     }
 
     private double calcKeywordMatchPercent(String resumeText, List<String> jdKeywords) {
         if (jdKeywords.isEmpty()) return 0.0;
-        long matched = jdKeywords.stream().filter(kw -> isMatchedInResume(kw, resumeText)).count();
+        long matched = jdKeywords.stream().filter(kw -> similarity.isKeywordMatched(kw, resumeText)).count();
         return (double) matched / jdKeywords.size();
-    }
-
-    private boolean hasMeasurableAchievements(String text) {
-        return Pattern.compile("[0-9]+%|[0-9]+x|\\$[0-9]+|[0-9]+\\s*(million|thousand|billion|k\\b)",
-            Pattern.CASE_INSENSITIVE).matcher(text).find();
     }
 
     private boolean hasNumericValue(String text) {
@@ -562,9 +657,35 @@ public class ATSScoreEngine {
         return Math.round(v * 100.0) / 100.0;
     }
 
+    public record CapResult(double cappedScore, boolean scoreCapped) {}
+
+    public static CapResult applyScoreCap(double uncappedScore, double skillsScore) {
+        double cap;
+        if (skillsScore < 40.0) {
+            cap = 54.0;
+        } else if (skillsScore < 60.0) {
+            cap = 69.0;
+        } else {
+            cap = 100.0;
+        }
+        if (uncappedScore > cap) {
+            return new CapResult(cap, true);
+        }
+        return new CapResult(uncappedScore, false);
+    }
+
+    public List<String> findMissingKeywords(String resumeText, String jdText) {
+        List<String> jdKeywords = tfidf.topKeywords(jdText, MAX_JD_KEYWORDS);
+        return jdKeywords.stream()
+            .filter(kw -> !similarity.isKeywordMatched(kw, resumeText))
+            .collect(Collectors.toList());
+    }
+
     // Result record - passed back to Analysis Service for persistence
     public record ScoreResult(
         double overallScore,
+        double uncappedScore,
+        boolean scoreCapped,
         double atsScore,
         double skillsScore,
         double impactScore,
@@ -590,8 +711,28 @@ public class ATSScoreEngine {
             List<String> matchedKeywords,
             List<String> missingKeywords
         ) {
-            this(overallScore, atsScore, skillsScore, impactScore, projectScore, writingScore,
-                 professionalismScore, statusLabel, keywordMatchPercent, matchedKeywords, missingKeywords, List.of());
+            this(overallScore, overallScore, false, atsScore, skillsScore, impactScore, projectScore,
+                 writingScore, professionalismScore, statusLabel, keywordMatchPercent,
+                 matchedKeywords, missingKeywords, List.of());
+        }
+
+        public ScoreResult(
+            double overallScore,
+            double atsScore,
+            double skillsScore,
+            double impactScore,
+            double projectScore,
+            double writingScore,
+            double professionalismScore,
+            String statusLabel,
+            double keywordMatchPercent,
+            List<String> matchedKeywords,
+            List<String> missingKeywords,
+            List<RiskResponse> risks
+        ) {
+            this(overallScore, overallScore, false, atsScore, skillsScore, impactScore, projectScore,
+                 writingScore, professionalismScore, statusLabel, keywordMatchPercent,
+                 matchedKeywords, missingKeywords, risks);
         }
     }
 }

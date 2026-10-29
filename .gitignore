@@ -211,18 +211,10 @@ $RECYCLE.BIN/
 .nfs*
 
 
-# GRAPHIFY / AI TOOLING ARTIFACTS
-
-# Graphify knowledge graph — fully regenerable from docs/ source files.
-# The docs/ markdown files themselves ARE committed; only the generated cache is not.
+# Local tooling state (not committed)
 docs/graphify-out/
-
-# Antigravity IDE local agent state (stored outside project root normally,
-# but guard against any local sidecar that lands inside the workspace)
-.agents/.cache/
+.agents/
 .gemini/
-
-# Any other AI-generated output directories that might appear
 .aider*
 .continue/
 

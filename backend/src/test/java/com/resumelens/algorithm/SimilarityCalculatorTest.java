@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Minimal self-check for SimilarityCalculator.
  * Covers the two non-trivial algorithms: Levenshtein DP and Cosine Similarity.
- * No framework, no fixtures — per Ponytail rules.
+ * No framework, no fixtures: keep the implementation minimal, avoid unnecessary abstractions.
  */
 class SimilarityCalculatorTest {
 
@@ -86,5 +86,43 @@ class SimilarityCalculatorTest {
         assertEquals(3, calc.levenshteinDistance("java", "javaaaa"));
         assertFalse(calc.isFuzzyMatch("java", "javaaaa", 2),
                 "isFuzzyMatch must return false when distance equals threshold + 1 (3 > 2)");
+    }
+
+    @Test
+    void should_matchJdSql_withResumeMysql() {
+        assertTrue(calc.isKeywordMatched("sql", "Proficient in MySQL database administration."));
+    }
+
+    @Test
+    void should_notMatchJdPostgreSql_withResumeMysql() {
+        assertFalse(calc.isKeywordMatched("postgresql", "Proficient in MySQL database administration."));
+    }
+
+    @Test
+    void should_matchJdK8s_withResumeKubernetes() {
+        assertTrue(calc.isKeywordMatched("k8s", "Managed container clusters using Kubernetes."));
+    }
+
+    @Test
+    void should_matchAliasesSymmetricallyAndDialects() {
+        assertTrue(calc.isKeywordMatched("SQL", "Experience with SQLite and MariaDB and MSSQL"));
+        assertTrue(calc.isKeywordMatched("sql", "Experience with PostgreSQL"));
+        assertTrue(calc.isKeywordMatched("sql", "Experience with Postgres"));
+        assertTrue(calc.isKeywordMatched("sql", "Experience with PLSQL and TSQL"));
+
+        assertTrue(calc.isKeywordMatched("postgresql", "Worked on Postgres"));
+        assertTrue(calc.isKeywordMatched("postgres", "Worked on PostgreSQL"));
+
+        assertTrue(calc.isKeywordMatched("javascript", "Frontend with JS"));
+        assertTrue(calc.isKeywordMatched("js", "Frontend with JavaScript"));
+
+        assertTrue(calc.isKeywordMatched("typescript", "Frontend with TS"));
+        assertTrue(calc.isKeywordMatched("ts", "Frontend with TypeScript"));
+
+        assertTrue(calc.isKeywordMatched("kubernetes", "Deployed to k8s"));
+        assertTrue(calc.isKeywordMatched("k8s", "Deployed to Kubernetes"));
+
+        assertTrue(calc.isKeywordMatched("machine learning", "Specialized in ML"));
+        assertTrue(calc.isKeywordMatched("ml", "Specialized in Machine Learning"));
     }
 }

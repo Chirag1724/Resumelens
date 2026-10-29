@@ -18,6 +18,8 @@ export default function InsightCard({
   badgeColor,
   icon: Icon,
 }) {
+  const isHex = typeof badgeColor === 'string' && badgeColor.startsWith('#');
+
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-5 flex flex-col justify-between hover:border-[var(--border-strong)] transition-colors duration-150">
       <div className="flex items-center justify-between mb-3">
@@ -40,9 +42,9 @@ export default function InsightCard({
             <span
               className="text-[11px] font-semibold px-2 py-0.5 rounded-[6px]"
               style={{
-                backgroundColor: badgeColor ? `${badgeColor}1F` : 'var(--bg-elevated)',
-                color: badgeColor || 'var(--text)',
-                border: `1px solid ${badgeColor ? `${badgeColor}40` : 'var(--border)'}`,
+                backgroundColor: isHex ? `${badgeColor}1F` : 'var(--bg-elevated)',
+                color: isHex ? badgeColor : (badgeColor || 'var(--text-secondary)'),
+                border: isHex ? `1px solid ${badgeColor}40` : '1px solid var(--border)',
               }}
             >
               {badgeText}

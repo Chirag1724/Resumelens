@@ -11,6 +11,8 @@ import { getScoreDetails } from '../lib/score';
  * @param {string} [props.tierLabel] - Optional tier label override (e.g. "Strong Match")
  * @param {number} [props.size=170] - Gauge diameter in pixels
  * @param {boolean} [props.showLabel=true] - Whether to show the tier label badge
+ * @param {boolean} [props.scoreCapped=false] - Whether the score was capped due to low job match
+ * @param {number} [props.uncappedScore] - The raw uncapped score value
  * @param {string} [props.className] - Optional container CSS classes
  */
 export default function ScoreGauge({
@@ -18,6 +20,8 @@ export default function ScoreGauge({
   tierLabel,
   size = 170,
   showLabel = true,
+  scoreCapped = false,
+  uncappedScore,
   className = '',
 }) {
   const gradientId = useId();
@@ -109,6 +113,13 @@ export default function ScoreGauge({
         >
           {displayLabel}
         </div>
+      )}
+
+      {/* Capped score notice */}
+      {Boolean(scoreCapped) && (
+        <p className="mt-3 text-xs text-[var(--text-secondary)] text-center max-w-xs leading-relaxed">
+          Score limited because the job match is low. Without the limit: {uncappedScore}
+        </p>
       )}
     </div>
   );
