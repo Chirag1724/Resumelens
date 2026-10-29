@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { ReactLenis, useLenis } from 'lenis/react';
+import 'lenis/dist/lenis.css';
 import { Menu, X } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import PageBackground from './components/PageBackground';
@@ -8,7 +10,30 @@ import LoginPage from './pages/LoginPage';
 import LandingPage from './pages/LandingPage';
 import ReportPage from './pages/ReportPage';
 import HistoryPage from './pages/HistoryPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 import { NotFoundPage } from './pages/Placeholders';
+import Footer from './components/Footer';
+import SitePreferences from './components/SitePreferences';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  const lenis = useLenis();
+
+  useEffect(() => {
+    if (lenis) {
+      lenis.scrollTo(0, { immediate: false, duration: 0.8 });
+    } else {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: 'smooth',
+      });
+    }
+  }, [pathname, lenis]);
+
+  return null;
+}
 
 function TopBar() {
   const { isAuthenticated, userEmail, logout } = useAuth();
@@ -178,61 +203,102 @@ export default function App() {
   const isHome = location.pathname === '/';
   const isAuth = location.pathname === '/login';
 
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handler = (e) => setPrefersReducedMotion(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
   return (
-    <AuthProvider>
-      <PageBackground isAuth={isAuth}>
-        <TopBar />
-        <main
-          className={`flex-1 w-full ${
-            isHome || isAuth ? '' : 'pt-24 sm:pt-28'
-          } ${isAuth ? 'h-full max-h-screen overflow-hidden' : ''}`}
-        >
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <ErrorBoundary pageName="Home">
-                  <LandingPage />
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/login"
-              element={
-                <ErrorBoundary pageName="Login">
-                  <LoginPage />
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/report/:id"
-              element={
-                <ErrorBoundary pageName="Report">
-                  <ReportPage />
-                </ErrorBoundary>
-              }
-            />
-            <Route
-              path="/history"
-              element={
-                <ProtectedRoute>
-                  <ErrorBoundary pageName="History">
-                    <HistoryPage />
+    <ReactLenis
+      root
+      options={{
+        lerp: 0.08,
+        duration: prefersReducedMotion ? 0 : 1.2,
+        smoothWheel: !prefersReducedMotion,
+      }}
+    >
+      <AuthProvider>
+        <ScrollToTop />
+        <PageBackground isAuth={isAuth}>
+          <TopBar />
+          <main
+            className={`flex-1 w-full ${
+              isHome || isAuth ? '' : 'pt-24 sm:pt-28'
+            } ${isAuth ? 'h-full max-h-screen overflow-hidden' : ''}`}
+          >
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <ErrorBoundary pageName="Home">
+                    <LandingPage />
                   </ErrorBoundary>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="*"
-              element={
-                <ErrorBoundary pageName="Not Found">
-                  <NotFoundPage />
-                </ErrorBoundary>
-              }
-            />
-          </Routes>
-        </main>
-      </PageBackground>
-    </AuthProvider>
+                }
+              />
+              <Route
+                path="/login"
+                element={
+                  <ErrorBoundary pageName="Login">
+                    <LoginPage />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/report/:id"
+                element={
+                  <ErrorBoundary pageName="Report">
+                    <ReportPage />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/history"
+                element={
+                  <ProtectedRoute>
+                    <ErrorBoundary pageName="History">
+                      <HistoryPage />
+                    </ErrorBoundary>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/privacy"
+                element={
+                  <ErrorBoundary pageName="Privacy">
+                    <PrivacyPage />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/terms"
+                element={
+                  <ErrorBoundary pageName="Terms">
+                    <TermsPage />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="*"
+                element={
+                  <ErrorBoundary pageName="Not Found">
+                    <NotFoundPage />
+                  </ErrorBoundary>
+                }
+              />
+            </Routes>
+          </main>
+          {!isAuth && <Footer />}
+          <SitePreferences />
+        </PageBackground>
+      </AuthProvider>
+    </ReactLenis>
   );
 }

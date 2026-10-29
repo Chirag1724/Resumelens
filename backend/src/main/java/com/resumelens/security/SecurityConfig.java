@@ -70,6 +70,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET,  "/api/v1/analysis/*/fix-prompt").permitAll()
                 // Health check
                 .requestMatchers("/api/v1/health").permitAll()
+                // Swagger UI & OpenAPI documentation
+                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs").permitAll()
                 // History requires authentication
                 .requestMatchers("/api/v1/history/**").authenticated()
                 .anyRequest().authenticated()

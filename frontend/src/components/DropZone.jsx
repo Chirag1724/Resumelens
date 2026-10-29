@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, X, AlertCircle, Loader2, CheckCircle2, Upload, Sparkles } from 'lucide-react';
 import PdfIcon from './PdfIcon';
 import DocumentMockup from './DocumentMockup';
@@ -194,103 +195,130 @@ export default function DropZone({ className = '' }) {
       />
 
       {/* Error notification banner */}
-      {errorMessage && (
-        <div
-          role="alert"
-          className="relative z-20 mb-4 p-3 rounded-xl border border-red-500/40 bg-red-500/10 text-red-400 text-xs flex items-start gap-2.5"
-        >
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-          <div className="flex-1 leading-relaxed">{errorMessage}</div>
-          <button
-            type="button"
-            onClick={() => setErrorMessage(null)}
-            className="text-red-400 hover:opacity-80 p-0.5"
-            aria-label="Dismiss error"
+      <AnimatePresence>
+        {errorMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+            role="alert"
+            className="relative z-20 mb-4 p-3 rounded-xl border border-red-500/40 bg-red-500/10 text-red-400 text-xs flex items-start gap-2.5"
           >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div className="flex-1 leading-relaxed">{errorMessage}</div>
+            <button
+              type="button"
+              onClick={() => setErrorMessage(null)}
+              className="text-red-400 hover:opacity-80 p-0.5"
+              aria-label="Dismiss error"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* STATE 1: Analyzing / Scanning progression */}
-      {isSubmitting ? (
-        <div className="flex flex-col items-center justify-center py-8 z-10 w-full px-4">
-          <div className="w-full max-w-xs mb-6">
-            <DocumentMockup scanning={true} />
-          </div>
-
-          <div className="w-full max-w-sm bg-[#111111] border border-white/10 rounded-2xl p-5 text-center shadow-xl">
-            <div className="flex items-center justify-center gap-6 mb-3">
-              <div className="flex items-center gap-2">
-                {currentStep === 'Uploading' ? (
-                  <Loader2 className="w-4 h-4 text-[#E8602E] animate-spin" />
-                ) : (
-                  <CheckCircle2 className="w-4 h-4 text-[#10b981]" />
-                )}
-                <span className={`text-xs font-semibold ${currentStep === 'Uploading' ? 'text-[#E8602E]' : 'text-white/60'}`}>
-                  Uploading
-                </span>
-              </div>
-
-              <span className="text-white/20">/</span>
-
-              <div className="flex items-center gap-2">
-                {currentStep === 'Analyzing' ? (
-                  <Loader2 className="w-4 h-4 text-[#E8602E] animate-spin" />
-                ) : (
-                  <div className="w-3 h-3 rounded-full border-2 border-white/20" />
-                )}
-                <span className={`text-xs font-semibold ${currentStep === 'Analyzing' ? 'text-[#E8602E]' : 'text-white/30'}`}>
-                  Analyzing
-                </span>
-              </div>
+      <AnimatePresence mode="wait">
+        {/* STATE 1: Analyzing / Scanning progression */}
+        {isSubmitting ? (
+          <motion.div
+            key="state-submitting"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.22 }}
+            className="flex flex-col items-center justify-center py-8 z-10 w-full px-4"
+          >
+            <div className="w-full max-w-xs mb-6">
+              <DocumentMockup scanning={true} />
             </div>
 
-            <p className="text-xs text-white/50">
-              {currentStep === 'Uploading'
-                ? 'Extracting resume text and verifying file structure...'
-                : 'Scoring six dimensions and computing keyword matches...'}
+            <div className="w-full max-w-sm bg-[#111111] border border-white/10 rounded-2xl p-5 text-center shadow-xl">
+              <div className="flex items-center justify-center gap-6 mb-3">
+                <div className="flex items-center gap-2">
+                  {currentStep === 'Uploading' ? (
+                    <Loader2 className="w-4 h-4 text-[#E8602E] animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 text-[#10b981]" />
+                  )}
+                  <span className={`text-xs font-semibold ${currentStep === 'Uploading' ? 'text-[#E8602E]' : 'text-white/60'}`}>
+                    Uploading
+                  </span>
+                </div>
+
+                <span className="text-white/20">/</span>
+
+                <div className="flex items-center gap-2">
+                  {currentStep === 'Analyzing' ? (
+                    <Loader2 className="w-4 h-4 text-[#E8602E] animate-spin" />
+                  ) : (
+                    <div className="w-3 h-3 rounded-full border-2 border-white/20" />
+                  )}
+                  <span className={`text-xs font-semibold ${currentStep === 'Analyzing' ? 'text-[#E8602E]' : 'text-white/30'}`}>
+                    Analyzing
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-xs text-white/50">
+                {currentStep === 'Uploading'
+                  ? 'Extracting resume text and verifying file structure...'
+                  : 'Scoring six dimensions and computing keyword matches...'}
+              </p>
+            </div>
+          </motion.div>
+        ) : !file ? (
+          /* STATE 2: Empty intake drop zone */
+          <motion.label
+            key="state-empty"
+            htmlFor="resume-upload"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onKeyDown={handleKeyDown}
+            tabIndex={0}
+            role="button"
+            aria-label="Drag and drop resume here or click to browse"
+            className="flex flex-col items-center cursor-pointer text-center w-full relative z-10 select-none outline-none"
+          >
+            {/* PdfIcon */}
+            <div className="mb-6 transform transition-transform duration-200 hover:scale-105">
+              <PdfIcon size={64} />
+            </div>
+
+            <h3 className="text-2xl md:text-3xl font-bold mb-3 tracking-tight text-white/90">
+              {isDragging ? 'Drop your resume here' : 'Drag & drop your resume here'}
+            </h3>
+
+            <p className="text-white/40 text-lg mb-8 font-medium">
+              or click to browse
             </p>
-          </div>
-        </div>
-      ) : !file ? (
-        /* STATE 2: Empty intake drop zone */
-        <label
-          htmlFor="resume-upload"
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onKeyDown={handleKeyDown}
-          tabIndex={0}
-          role="button"
-          aria-label="Drag and drop resume here or click to browse"
-          className="flex flex-col items-center cursor-pointer text-center w-full relative z-10 select-none outline-none"
-        >
-          {/* PdfIcon */}
-          <div className="mb-6 transform transition-transform duration-200 hover:scale-105">
-            <PdfIcon size={64} />
-          </div>
 
-          <h3 className="text-2xl md:text-3xl font-bold mb-3 tracking-tight text-white/90">
-            {isDragging ? 'Drop your resume here' : 'Drag & drop your resume here'}
-          </h3>
+            <div className="px-12 py-3.5 border border-[#E8602E]/40 bg-[#E8602E]/[0.02] hover:bg-[#E8602E]/10 text-white text-[15px] font-bold rounded-xl flex items-center gap-3 transition-all duration-300 pointer-events-none shadow-[0_0_30px_rgba(232,96,46,0.1)]">
+              <Upload className="w-5 h-5 text-[#E8602E]" />
+              <span>Upload Resume</span>
+            </div>
 
-          <p className="text-white/40 text-lg mb-8 font-medium">
-            or click to browse
-          </p>
-
-          <div className="px-12 py-3.5 border border-[#E8602E]/40 bg-[#E8602E]/[0.02] hover:bg-[#E8602E]/10 text-white text-[15px] font-bold rounded-xl flex items-center gap-3 transition-all duration-300 pointer-events-none shadow-[0_0_30px_rgba(232,96,46,0.1)]">
-            <Upload className="w-5 h-5 text-[#E8602E]" />
-            <span>Upload Resume</span>
-          </div>
-
-          <p className="text-sm text-white/30 mt-8 font-medium">
-            Supported formats: PDF, DOCX &bull; Max 10MB
-          </p>
-        </label>
-      ) : (
-        /* STATE 3: Selected file transformed form with perfected spacing and modern styling */
-        <form onSubmit={handleSubmit} className="w-full space-y-4 sm:space-y-4.5 relative z-10">
+            <p className="text-sm text-white/30 mt-8 font-medium">
+              Supported formats: PDF, DOCX &bull; Max 10MB
+            </p>
+          </motion.label>
+        ) : (
+          /* STATE 3: Selected file transformed form with perfected spacing and modern styling */
+          <motion.form
+            key="state-form"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22 }}
+            onSubmit={handleSubmit}
+            className="w-full space-y-4 sm:space-y-4.5 relative z-10"
+          >
           {/* File chip with remove button */}
           <div className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-[#141418] border border-white/10 shadow-lg">
             <div className="flex items-center gap-3.5 overflow-hidden min-w-0">
@@ -430,8 +458,9 @@ export default function DropZone({ className = '' }) {
               )}
             </button>
           </div>
-        </form>
+        </motion.form>
       )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   FileCheck,
   Cpu,
@@ -514,7 +515,12 @@ export default function ReportPage() {
   );
 
   return (
-    <div className="w-full max-w-6xl xl:max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      className="w-full max-w-6xl xl:max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8"
+    >
       {/* 8.10 Action Buttons Row */}
       <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
@@ -937,6 +943,6 @@ export default function ReportPage() {
         onClose={() => setIsModalOpen(false)}
         analysisId={id}
       />
-    </div>
+    </motion.div>
   );
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getFixPrompt } from '../api/client';
 import { X, Copy, Check, Sparkles, Loader2, RefreshCw } from 'lucide-react';
 
@@ -96,8 +97,6 @@ export default function FixPromptModal({ isOpen, onClose, analysisId }) {
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   // Copy to clipboard with fallback
   const handleCopy = async () => {
     if (!promptText) return;
@@ -136,21 +135,33 @@ export default function FixPromptModal({ isOpen, onClose, analysisId }) {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="fix-prompt-modal-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div
-        ref={modalRef}
-        className="w-full max-w-2xl bg-[var(--bg-card)] border border-[var(--border)] rounded-[18px] p-6 shadow-[0_40px_80px_rgba(0,0,0,0.50)] flex flex-col max-h-[90vh] overflow-hidden"
-      >
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          key="fix-prompt-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="fix-prompt-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              onClose();
+            }
+          }}
+        >
+          <motion.div
+            key="fix-prompt-content"
+            initial={{ opacity: 0, scale: 0.95, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 12 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+            ref={modalRef}
+            className="w-full max-w-2xl bg-[var(--bg-card)] border border-[var(--border)] rounded-[18px] p-6 shadow-[0_40px_80px_rgba(0,0,0,0.50)] flex flex-col max-h-[90vh] overflow-hidden"
+          >
         {/* Header */}
         <div className="flex items-start justify-between gap-4 pb-4 border-b border-[var(--border)]">
           <div>
@@ -252,7 +263,9 @@ export default function FixPromptModal({ isOpen, onClose, analysisId }) {
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
   );
 }

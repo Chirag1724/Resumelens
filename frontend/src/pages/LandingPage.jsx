@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Check, AlertCircle } from 'lucide-react';
 import DropZone from '../components/DropZone';
 import DocumentMockup from '../components/DocumentMockup';
@@ -143,7 +144,12 @@ export default function LandingPage() {
         >
           <div className="w-full grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-12 lg:gap-16 xl:gap-20 items-center">
             {/* Left Column: Value Proposition */}
-            <div className="flex flex-col gap-6 sm:gap-7 pt-2 relative z-10">
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
+              className="flex flex-col gap-6 sm:gap-7 pt-2 relative z-10"
+            >
               {/* Pill badge */}
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E8602E]/10 border border-[#E8602E]/30 w-fit">
                 <span className="text-[#E8602E] text-xs font-semibold tracking-wide">
@@ -173,12 +179,17 @@ export default function LandingPage() {
                   Every score explained
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Right Column: Upload Zone Card */}
-            <div className="w-full relative z-10">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.55, delay: 0.1, ease: [0.25, 1, 0.5, 1] }}
+              className="w-full relative z-10"
+            >
               <DropZone />
-            </div>
+            </motion.div>
           </div>
         </section>
       </div>
@@ -206,20 +217,28 @@ export default function LandingPage() {
 
           {/* Interactive Role Selector Tabs */}
           <div className="flex items-center gap-2 p-1.5 rounded-[12px] bg-[var(--bg-elevated)] border border-[var(--border)] self-start md:self-auto overflow-x-auto hide-scrollbar">
-            {SAMPLE_REPORTS.map((sample) => (
-              <button
-                key={sample.id}
-                type="button"
-                onClick={() => setActiveSample(sample)}
-                className={`px-4 py-2 rounded-[8px] text-xs sm:text-sm font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                  activeSample.id === sample.id
-                    ? 'bg-[var(--brand-500)] text-[var(--on-brand)] shadow-sm'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text)]'
-                }`}
-              >
-                {sample.label}
-              </button>
-            ))}
+            {SAMPLE_REPORTS.map((sample) => {
+              const isActive = activeSample.id === sample.id;
+              return (
+                <button
+                  key={sample.id}
+                  type="button"
+                  onClick={() => setActiveSample(sample)}
+                  className={`relative px-4 py-2 rounded-[8px] text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer ${
+                    isActive ? 'text-[var(--on-brand)]' : 'text-[var(--text-secondary)] hover:text-[var(--text)]'
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeSampleTabIndicator"
+                      className="absolute inset-0 bg-[var(--brand-500)] rounded-[8px] shadow-sm -z-0"
+                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                  <span className="relative z-10">{sample.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -232,89 +251,100 @@ export default function LandingPage() {
           </div>
 
           {/* Right: Interactive Report Card */}
-          <div className="md:col-span-7 lg:col-span-7 xl:col-span-8 rounded-[18px] bg-[var(--bg-card)] border border-[var(--border)] p-6 sm:p-8 xl:p-10 flex flex-col gap-6 shadow-[0_20px_40px_rgba(0,0,0,0.30)]">
-            <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
-              <div className="space-y-0.5">
-                <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
-                  Evaluation Profile
-                </span>
-                <p className="font-heading font-semibold text-sm text-[var(--text)]">
-                  {activeSample.role}
-                </p>
-              </div>
-              <span className="text-[11px] font-mono uppercase tracking-[0.08em] px-2.5 py-1 rounded-[6px] bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-secondary)] shrink-0">
-                Sample Report
-              </span>
-            </div>
+          <div className="md:col-span-7 lg:col-span-7 xl:col-span-8 rounded-[18px] bg-[var(--bg-card)] border border-[var(--border)] p-6 sm:p-8 xl:p-10 shadow-[0_20px_40px_rgba(0,0,0,0.30)] min-h-[360px]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeSample.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+                className="flex flex-col gap-6"
+              >
+                <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
+                  <div className="space-y-0.5">
+                    <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+                      Evaluation Profile
+                    </span>
+                    <p className="font-heading font-semibold text-sm text-[var(--text)]">
+                      {activeSample.role}
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-mono uppercase tracking-[0.08em] px-2.5 py-1 rounded-[6px] bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-secondary)] shrink-0">
+                    Sample Report
+                  </span>
+                </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
-              {/* ScoreGauge */}
-              <div className="sm:col-span-5 flex justify-center">
-                <ScoreGauge score={activeSample.score} tierLabel={activeSample.tier} size={150} />
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
+                  {/* ScoreGauge */}
+                  <div className="sm:col-span-5 flex justify-center">
+                    <ScoreGauge score={activeSample.score} tierLabel={activeSample.tier} size={150} />
+                  </div>
 
-              {/* Check items */}
-              <div className="sm:col-span-7 space-y-3">
-                {activeSample.checks.map((chk, idx) => (
-                  <div key={idx} className="flex items-center gap-2.5">
-                    <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border ${
-                        chk.pass
-                          ? 'bg-[rgba(0,164,109,0.12)] border-[var(--success)] text-[var(--success)]'
-                          : 'bg-[rgba(255,155,0,0.12)] border-[var(--accent-orange)] text-[var(--accent-orange)]'
-                      }`}
-                    >
-                      {chk.pass ? (
-                        <Check className="w-3 h-3 stroke-[2.5]" />
-                      ) : (
-                        <AlertCircle className="w-3 h-3" />
-                      )}
-                    </div>
-                    <span className="text-xs sm:text-sm font-medium text-[var(--text)]">
-                      {chk.text}
+                  {/* Check items */}
+                  <div className="sm:col-span-7 space-y-3">
+                    {activeSample.checks.map((chk, idx) => (
+                      <div key={idx} className="flex items-center gap-2.5">
+                        <div
+                          className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 border ${
+                            chk.pass
+                              ? 'bg-[rgba(0,164,109,0.12)] border-[var(--success)] text-[var(--success)]'
+                              : 'bg-[rgba(255,155,0,0.12)] border-[var(--accent-orange)] text-[var(--accent-orange)]'
+                          }`}
+                        >
+                          {chk.pass ? (
+                            <Check className="w-3 h-3 stroke-[2.5]" />
+                          ) : (
+                            <AlertCircle className="w-3 h-3" />
+                          )}
+                        </div>
+                        <span className="text-xs sm:text-sm font-medium text-[var(--text)]">
+                          {chk.text}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Keyword match progress bar */}
+                <div className="pt-4 border-t border-[var(--border)] space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[var(--text-secondary)] font-medium">
+                      Matched {activeSample.matchedCount} of {activeSample.totalCount} keywords
+                    </span>
+                    <span className="font-mono text-[var(--brand-500)] font-semibold">
+                      {activeSample.percent}%
                     </span>
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div className="h-2 w-full bg-[var(--bg-elevated)] rounded-full overflow-hidden border border-[var(--border)]">
+                    <div
+                      className="h-full bg-[var(--brand-500)] rounded-full transition-all duration-500 ease-out"
+                      style={{ width: `${activeSample.percent}%` }}
+                    />
+                  </div>
 
-            {/* Keyword match progress bar */}
-            <div className="pt-4 border-t border-[var(--border)] space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[var(--text-secondary)] font-medium">
-                  Matched {activeSample.matchedCount} of {activeSample.totalCount} keywords
-                </span>
-                <span className="font-mono text-[var(--brand-500)] font-semibold">
-                  {activeSample.percent}%
-                </span>
-              </div>
-              <div className="h-2 w-full bg-[var(--bg-elevated)] rounded-full overflow-hidden border border-[var(--border)]">
-                <div
-                  className="h-full bg-[var(--brand-500)] rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${activeSample.percent}%` }}
-                />
-              </div>
-
-              {/* Sample matched skill chips */}
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {activeSample.matchedKeywords.map((kw, i) => (
-                  <span
-                    key={i}
-                    className="text-[11px] font-mono px-2 py-0.5 rounded-[4px] bg-[rgba(0,164,109,0.10)] border border-[rgba(0,164,109,0.25)] text-[var(--success)]"
-                  >
-                    +{kw}
-                  </span>
-                ))}
-                {activeSample.missingKeywords.map((kw, i) => (
-                  <span
-                    key={i}
-                    className="text-[11px] font-mono px-2 py-0.5 rounded-[4px] bg-[rgba(255,155,0,0.10)] border border-[rgba(255,155,0,0.25)] text-[var(--accent-orange)]"
-                  >
-                    -{kw}
-                  </span>
-                ))}
-              </div>
-            </div>
+                  {/* Sample matched skill chips */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {activeSample.matchedKeywords.map((kw, i) => (
+                      <span
+                        key={i}
+                        className="text-[11px] font-mono px-2 py-0.5 rounded-[4px] bg-[rgba(0,164,109,0.10)] border border-[rgba(0,164,109,0.25)] text-[var(--success)]"
+                      >
+                        +{kw}
+                      </span>
+                    ))}
+                    {activeSample.missingKeywords.map((kw, i) => (
+                      <span
+                        key={i}
+                        className="text-[11px] font-mono px-2 py-0.5 rounded-[4px] bg-[rgba(255,155,0,0.10)] border border-[rgba(255,155,0,0.25)] text-[var(--accent-orange)]"
+                      >
+                        -{kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       </section>
@@ -715,39 +745,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-      {/* 7.7 Footer */}
-      <footer className="w-full border-t border-[var(--border)] py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl xl:max-w-[1360px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
-            <img
-              src="/favicon.svg"
-              alt="ResumeLens Logo"
-              className="w-5 h-5 object-contain rounded"
-            />
-            <span className="font-heading font-bold text-sm text-[var(--text)]">
-              ResumeLens
-            </span>
-            <span className="text-neutral-600 hidden sm:inline">&bull;</span>
-            <p className="text-xs text-[var(--text-tertiary)] leading-relaxed">
-              Scores are rule based estimates and do not guarantee any ATS result.
-            </p>
-          </div>
-
-          <a
-            href="https://github.com/Chirag1724/Resumelens"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-300 hover:text-white transition-all duration-150 px-3.5 py-1.5 rounded-lg border border-white/10 hover:border-white/20 bg-white/[0.03] hover:bg-white/[0.08]"
-            aria-label="GitHub Repository"
-          >
-            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
-              <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-            </svg>
-            <span>GitHub</span>
-          </a>
-        </div>
-      </footer>
     </div>
   );
 }

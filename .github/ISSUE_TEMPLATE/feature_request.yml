@@ -1,0 +1,48 @@
+name: Feature Request
+description: Propose a new feature, scoring dimension, or enhancement
+title: "[FEAT]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an improvement for ResumeLens!
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem or limitation?
+      placeholder: I'm always frustrated when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: A clear and concise description of what you want to happen.
+      placeholder: Describe the proposed enhancement...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or workarounds you've considered.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area of Enhancement
+      options:
+        - Scoring Engine / NLP Algorithm
+        - Document Parsing (PDF / DOCX)
+        - User Interface & Visualization
+        - Export / Reporting
+        - DevOps / Infrastructure
+    validations:
+      required: true

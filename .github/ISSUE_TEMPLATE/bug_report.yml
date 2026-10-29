@@ -1,0 +1,64 @@
+name: Bug Report
+description: Report an issue or unexpected behavior in ResumeLens
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue! Please provide as much detail as possible to help reproduce and fix the bug.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe what happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: What steps are needed to trigger the bug?
+      placeholder: |
+        1. Upload a resume file with...
+        2. Provide job description...
+        3. Click 'Analyze'...
+        4. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: A concise description of what you expected to happen.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      options:
+        - Backend (Spring Boot / Java)
+        - Frontend (React / Vite UI)
+        - Algorithm / Scoring (TF-IDF, Parser, Cosine Similarity)
+        - Docker / Deployment
+        - Documentation
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Info
+      description: OS version, Java version, Node version, browser, etc.
+      placeholder: |
+        - OS: Windows 11 / Ubuntu 22.04 / macOS
+        - Java Version: JDK 17
+        - Browser: Chrome 124
+    validations:
+      required: false

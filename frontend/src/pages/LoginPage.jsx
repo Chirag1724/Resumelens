@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Mail,
@@ -549,6 +549,19 @@ export default function LoginPage() {
                   >
                     Continue as guest
                   </button>
+                </div>
+
+                <div className="pt-2 border-t border-white/[0.06] text-center">
+                  <p className="text-[11px] text-neutral-500 leading-relaxed">
+                    By continuing, you agree to ResumeLens's{' '}
+                    <Link to="/terms" className="text-neutral-400 hover:text-white underline">
+                      Terms of Service
+                    </Link>{' '}
+                    and{' '}
+                    <Link to="/privacy" className="text-neutral-400 hover:text-white underline">
+                      Privacy Policy
+                    </Link>.
+                  </p>
                 </div>
               </div>
             </div>

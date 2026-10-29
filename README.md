@@ -1,248 +1,207 @@
 # ResumeLens
 
-ATS resume scoring tool that evaluates a resume against a job description using TF-IDF, Cosine Similarity, and Levenshtein Distance, all implemented from scratch in Java.
+<div align="center">
 
-> Screenshots will be added once the frontend is complete.
+[![CI Pipeline](https://github.com/Chirag1724/Resumelens/actions/workflows/ci.yml/badge.svg)](https://github.com/Chirag1724/Resumelens/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Chirag1724/Resumelens?color=E8602E)](https://github.com/Chirag1724/Resumelens/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Java 17](https://img.shields.io/badge/Java-17-orange.svg)](https://www.oracle.com/java/)
+[![Spring Boot 3](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![React 18](https://img.shields.io/badge/React-18-61DAFB.svg)](https://react.dev/)
+[![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](docker-compose.yml)
+
+**Privacy-first ATS resume scoring tool and intelligence engine powered by TF-IDF, Cosine Similarity, and deterministic mathematical evaluation.**
+
+[Features](#features) • [Architecture](#architecture) • [Quick Start](#quick-start-with-docker) • [Local Setup](#local-development-setup) • [Contributing](CONTRIBUTING.md)
+
+</div>
 
 ---
 
-## What it does
+## What It Does
 
-ResumeLens accepts a resume (PDF or plain text) and a job description, then produces a structured compatibility score broken down across six categories: ATS formatting compliance, skills match, impact and achievements, project quality, writing quality, and professionalism. The score reflects how well a resume is likely to perform against an automated screening system for that specific role. Alongside the score, the system generates a copyable prompt the user can take to an external AI assistant (such as ChatGPT or Gemini) to get specific improvement suggestions, the system itself does not call any AI API.
+ResumeLens accepts a resume (PDF or plain text) and a job description, then produces an instant, transparent compatibility score broken down across six categories: ATS formatting compliance, skills match, impact and achievements, project quality, writing quality, and professionalism.
+
+The score reflects how well a resume performs against automated screening systems for that specific role. Alongside the score, the system identifies missing high-value keywords and generates copyable fix prompts for targeted resume improvement. Zero raw documents are permanently retained on disk.
 
 ---
 
-## Features
+## Key Features
 
-- Resume parsing from PDF and plain text input
-- TF-IDF weighted keyword extraction from the job description
-- Cosine Similarity scoring between resume and job description term vectors
-- Levenshtein Distance fuzzy matching for skill name variants
-- Six-category section scoring with per-section feedback and weighted overall score
-- Keyword gap analysis listing matched and missing JD keywords
-- ATS risk detection covering formatting, missing sections, and contact info issues
-- Prioritized improvement suggestions based on lowest-scoring sections
-- PDF report export of the full analysis result
-- Optional account creation with saved analysis history
-- Fix-prompt generation: a structured, copyable prompt for use with an external AI assistant
+- **In-Memory Document Ingestion**: Text extraction for PDF and DOCX files without persisting raw files.
+- **Deterministic NLP Algorithms**: From-scratch Java implementations of TF-IDF, Cosine Similarity, and Levenshtein fuzzy matching.
+- **6-Dimension ATS Scoring**: Transparent scoring across ATS Compatibility, Skills Validation, Impact & Metrics, Project Quality, Writing Quality, and Professionalism.
+- **Keyword Gap Analysis**: Categorized breakdown of matched skills vs. missing target keywords.
+- **ATS Risk Flags**: Automatic detection of parsing pitfalls, non-standard section headings, table usage, and missing contact info.
+- **Interactive UI & Visualizer**: Glassmorphic dark-mode web application with real-time scan animation and SVG score gauges.
+- **AI Fix-Prompt Generator**: Structured prompts ready to copy into external assistants for customized bullet-point rewriting.
+- **PDF Report Export**: Downloadable evaluation summary for offline candidate or job-seeker review.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TD
+    subgraph Client ["Frontend (React 18 + Vite)"]
+        A[User Upload: Resume & JD] --> B[DropZone Component]
+        B --> C[Instant Preview & Status]
+    end
+
+    subgraph Server ["Backend (Spring Boot 3 + Java 17)"]
+        C -->|REST API Request| D[AnalysisController]
+        D --> E[ResumeParserService]
+        E -->|Extract Text| F[Apache PDFBox / POI]
+        F --> G[TfIdfCalculator]
+        G --> H[SimilarityCalculator]
+        H --> I[ATSScoreEngine]
+        I -->|6 Dimensions Evaluated| J[ReportGeneratorService]
+    end
+
+    subgraph Storage ["Database (PostgreSQL / Supabase)"]
+        J -->|Save Metadata & Scores| K[(PostgreSQL)]
+    end
+
+    J -->|Structured JSON Response| L[ReportPage Visualizer]
+```
 
 ---
 
 ## Tech Stack
 
-| Layer             | Technology                              |
-| ----------------- | --------------------------------------- |
-| Frontend          | React 18 + Vite, plain CSS              |
-| Backend           | Spring Boot (Java 17+), Spring Data JPA |
-| Database          | PostgreSQL 15+ (hosted on Supabase)     |
-| Authentication    | JWT via Spring Security                 |
-| PDF parsing       | Apache PDFBox                           |
-| DOCX parsing      | Apache POI                              |
-| Report generation | iText (PDF export)                      |
+| Layer                   | Technology                                      | Description                                       |
+| ----------------------- | ----------------------------------------------- | ------------------------------------------------- |
+| **Frontend**            | React 18, Vite 6, Tailwind CSS                  | Glassmorphic SPA with responsive dark mode        |
+| **Backend**             | Java 17, Spring Boot 3.2.5, Spring Security     | REST API with stateless JWT authentication        |
+| **Database**            | PostgreSQL 16 (Local or Supabase)               | Relational metadata storage for analysis sessions |
+| **NLP & Scoring**       | TF-IDF, Cosine Similarity, Levenshtein Distance | Pure Java deterministic algorithms                |
+| **Document Processing** | Apache PDFBox, Apache POI                       | PDF and DOCX parsing and text extraction          |
+| **PDF Reporting**       | iText Core 8.0.4                                | Automated exportable analysis reports             |
+| **Infrastructure**      | Docker, Docker Compose, Nginx                   | Multi-stage container builds and orchestration    |
 
 ---
 
-## How It Works
+## Quick Start with Docker
 
-1. The user uploads a resume (PDF or pastes plain text) and provides a job description.
-2. The backend extracts and normalises text from the resume using PDFBox or POI depending on file type.
-3. TF-IDF is computed over the job description to identify the most important keywords, capped at 30 terms.
-4. Each JD keyword is checked against the resume using exact matching and Levenshtein fuzzy matching with a distance threshold of 2.
-5. A Cosine Similarity score is computed between the resume and JD term-frequency vectors.
-6. Six scoring dimensions are evaluated independently and combined using fixed weights into an overall score between 0 and 100.
-7. The system returns a full breakdown: per-section scores, matched and missing keywords, ATS risk flags, improvement notes, and a copyable AI prompt.
+The fastest way to run the entire ResumeLens stack locally is with Docker Compose:
 
----
+```bash
+# 1. Clone the repository
+git clone https://github.com/Chirag1724/Resumelens.git
 
-## Project Structure
-
-```
-backend/    Spring Boot REST API, scoring logic, and self-implemented NLP algorithms
-frontend/   React + Vite single-page application
-docs/       Architecture documentation, scoring rules, conventions, and decisions log
+# 2. Launch PostgreSQL, Backend, and Frontend containers
+docker compose up -d --build
 ```
 
+- **Frontend App**: `http://localhost`
+- **Backend REST API**: `http://localhost:8080/api/v1`
+- **Interactive Swagger UI**: `http://localhost:8080/swagger-ui/index.html`
+- **Health Check**: `http://localhost:8080/api/v1/health`
+
+To stop the containers:
+```bash
+docker compose down
+```
+
 ---
 
-## Getting Started
+## Local Development Setup
 
 ### Prerequisites
 
-- Java 17 or later
-- Maven 3.8 or later
-- Node.js 18 or later
-- PostgreSQL 15 running locally, or a Supabase project
+- **Java JDK**: Version 17 or higher
+- **Maven**: Version 3.8+ (wrapper `./mvnw` included)
+- **Node.js**: Version 20 or higher (with npm)
+- **PostgreSQL**: Version 15+ (local instance or free Supabase tier)
 
 ### Backend Setup
 
-1. Clone the repository.
-
-   ```bash
-   git clone https://github.com/Chirag1724/Resumelens.git
-   ```
-
-2. Create a PostgreSQL database.
-
-   **Local PostgreSQL:**
-   ```sql
-   CREATE DATABASE resumelens;
-   ```
-
-   **Supabase:** Create a project at [supabase.com](https://supabase.com). The `postgres` database is created automatically. Retrieve your Session pooler connection string from Project Settings > Database.
-
-3. Set up your environment variables.
-
-   Copy the example file and fill in real values:
-
+1. Copy the environment configuration template:
    ```bash
    cp backend/.env.example backend/.env
-   # Edit backend/.env with your actual database credentials and JWT secret
    ```
-
-   > **Tip:** Spring Boot 3 natively loads `backend/.env` automatically on startup via `spring.config.import` configured in `application.yml`. Once you fill out `backend/.env`, you can directly run the backend!
-   > 
-   > If you prefer setting system environment variables manually or for CI/CD, you can still export them in your shell or IDE run configurations:
-
-   **Shell (Linux / macOS / Git Bash) — local PostgreSQL:**
+2. Configure your database connection in `backend/.env`:
    ```bash
-   export DB_URL=jdbc:postgresql://localhost:5432/resumelens
-   export DB_USERNAME=postgres
-   export DB_PASSWORD=your_postgres_password
-   export JWT_SECRET=your_long_random_secret_here
-   # Optional: allowed CORS origins (comma-separated, defaults to http://localhost:5173)
-   export CORS_ALLOWED_ORIGINS=http://localhost:5173
+   DB_URL=jdbc:postgresql://localhost:5432/resumelens
+   DB_USERNAME=postgres
+   DB_PASSWORD=your_password
+   JWT_SECRET=your_32_character_minimum_random_secret_string
    ```
-
-   **Shell (Linux / macOS / Git Bash) — Supabase Session pooler:**
-   ```bash
-   export DB_URL=jdbc:postgresql://HOST_FROM_DASHBOARD:5432/postgres?sslmode=require
-   export DB_USERNAME=postgres.YOUR_PROJECT_REF
-   export DB_PASSWORD=your_database_password
-   export JWT_SECRET=your_long_random_secret_here
-   # Optional: allowed CORS origins (comma-separated, defaults to http://localhost:5173)
-   export CORS_ALLOWED_ORIGINS=http://localhost:5173
-   ```
-
-   **PowerShell (Windows) — local PostgreSQL:**
-   ```powershell
-   $env:DB_URL               = "jdbc:postgresql://localhost:5432/resumelens"
-   $env:DB_USERNAME          = "postgres"
-   $env:DB_PASSWORD          = "your_postgres_password"
-   $env:JWT_SECRET           = "your_long_random_secret_here"
-   # Optional: allowed CORS origins (comma-separated, defaults to http://localhost:5173)
-   $env:CORS_ALLOWED_ORIGINS = "http://localhost:5173"
-   ```
-
-   **IntelliJ IDEA:** Run → Edit Configurations → your Spring Boot config → Environment Variables.
-
-   **VS Code:** Add an `"env"` block to your `launch.json` run configuration.
-
-   The `JWT_SECRET` must be at least 32 characters. Generate a secure value with:
-   ```bash
-   openssl rand -base64 48
-   ```
-
-4. Run the backend.
-
-   **Linux and macOS:**
+3. Run the Spring Boot application:
    ```bash
    cd backend
    ./mvnw spring-boot:run
    ```
 
-   **Windows:**
-   ```powershell
-   cd backend
-   .\mvnw.cmd spring-boot:run
-   ```
-
-   The API will be available at `http://localhost:8080`. The health endpoint at `/api/v1/health` returns `{ "status": "UP" }` when the server is ready.
-
 ### Frontend Setup
 
-1. Ensure the backend API is running with its environment variables configured, including `CORS_ALLOWED_ORIGINS` permitting `http://localhost:5173` (the default origin).
-
-2. Navigate to the frontend directory:
-
+1. Navigate to the frontend directory:
    ```bash
    cd frontend
-   ```
-
-3. Install dependencies:
-
-   ```bash
    npm install
    ```
-
-4. Set up the frontend environment configuration:
-
+2. Copy the environment template:
    ```bash
    cp .env.example .env
    ```
-
-   The default `.env` points `VITE_API_BASE_URL` to the backend REST endpoint (`http://localhost:8080`).
-
-5. Start the frontend development server:
-
+3. Start the Vite development server:
    ```bash
    npm run dev
    ```
-
-   The single-page application will be accessible at `http://localhost:5173`.
+   Open `http://localhost:5173` in your browser.
 
 ---
 
 ## Running Tests
 
-**Linux and macOS:**
+All mathematical algorithms, edge cases, and endpoints are covered by comprehensive unit and integration test suites:
+
 ```bash
+# Backend Test Suite (174 tests)
 cd backend
 ./mvnw test
-```
 
-**Windows:**
-```powershell
-cd backend
-.\mvnw.cmd test
+# Frontend Production Bundle Check
+cd ../frontend
+npm run build
 ```
 
 ---
 
-## Algorithms
+## Algorithmic Foundation
 
-### TF-IDF
-
-Term Frequency-Inverse Document Frequency is used to weight keywords in the job description by how informative they are relative to the resume text. Implementing it from scratch rather than delegating to a library such as Apache Lucene or Elasticsearch means the exact weighting formula is visible, auditable, and free of index-management overhead that is unnecessary for a two-document comparison.
+### TF-IDF (Term Frequency - Inverse Document Frequency)
+Used to weight terms in the job description by their significance relative to the resume text. Implemented directly in Java to eliminate heavyweight dependencies and ensure that term frequency calculation and IDF logarithmic dampening remain completely transparent and auditable.
 
 ### Cosine Similarity
-
-Cosine Similarity measures the angle between the resume and job description as TF-IDF weighted term vectors, producing a score that is independent of document length. A from-scratch implementation avoids pulling in a full linear algebra or NLP library for what reduces to a dot product and two magnitude calculations, keeping the dependency footprint minimal and the logic transparent.
+Calculates the normalized dot product of TF-IDF vectors representing the candidate document and target job description. The resulting score is length-independent and strictly bounded between `0.0` and `1.0`.
 
 ### Levenshtein Distance
-
-Levenshtein Distance counts the minimum single-character edits needed to transform one string into another, used here to match skill name variants such as "Javascript" against "JavaScript" or "Node" against "Node.js". Implementing it directly in Java allows the edit-distance threshold (currently 2) to be tuned and documented in one place, with no licence or version compatibility concerns from an external library.
-
----
-
-## Limitations
-
-- Matching is keyword-level, not semantic. Synonyms or paraphrased descriptions of the same skill are not recognised unless they are within the Levenshtein threshold.
-- English-only. The text normalisation and keyword extraction pipeline is not designed or tested for non-English resumes or job descriptions.
-- Resume content is not verified. The system scores what is written, with no way to validate whether stated experience or skills are accurate.
-- Scoring weights are manually specified based on informed judgment, not derived from a large validated dataset. The relative importance of each dimension may not generalise to all industries or roles.
+Computes single-character edit distances (insertions, deletions, substitutions) to identify skill name aliases (e.g. `Javascript` vs. `JavaScript`, `Node` vs. `Node.js`) using a calibrated threshold of 2.
 
 ---
 
-## Roadmap
+## Community & Contributing
 
-- Live job portal integration to pull job descriptions directly from public listings
-- ML-based resume classification to adjust scoring criteria by industry or role type
-- Recruiter-facing dashboard for reviewing and filtering candidate submissions
-- Multi-language support for resume and job description processing
-- Automated AI-assisted resume rewriting integrated directly into the results view
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting pull requests.
+
+If you find a bug or have a suggestion, please open an issue using the [Issue Templates](.github/ISSUE_TEMPLATE/).
 
 ---
 
-## License
+## Author & Maintainer
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+ResumeLens was created and is actively maintained by:
+
+**Chirag Dwivedi**
+- GitHub: [@Chirag1724](https://github.com/Chirag1724)
+- Email: [chiragdwivediji@gmail.com](mailto:chiragdwivediji@gmail.com)
+
+---
+
+## License & Governance
+
+- **License:** Distributed under the [MIT License](LICENSE).
+- **Privacy Policy:** Transparent, ephemeral data handling details in [PRIVACY.md](PRIVACY.md).
+- **Terms of Service:** Educational usage and disclaimer in [TERMS.md](TERMS.md).
+- **Security Policy:** Coordinated vulnerability disclosure in [SECURITY.md](SECURITY.md).
