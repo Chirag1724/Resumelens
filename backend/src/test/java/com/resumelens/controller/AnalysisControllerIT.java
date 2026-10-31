@@ -327,6 +327,49 @@ class AnalysisControllerIT {
         assertEquals(postRisks, getRisks, "GET risks must equal POST risks for the same result");
     }
 
+    @Test
+    void should_returnEqualRiskAndSuggestionFields_inPostAndGet() throws Exception {
+        String matchBody = mockMvc.perform(post("/api/v1/analysis/match")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(TestData.matchJson(resumeId, SAMPLE_JD, "Software Engineer")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode postRisks = mapper.readTree(matchBody).path("data").path("risks");
+        JsonNode postSuggestions = mapper.readTree(matchBody).path("data").path("suggestions");
+        String idStr = mapper.readTree(matchBody).path("data").path("id").asText();
+        UUID id = UUID.fromString(idStr);
+
+        String getBody = mockMvc.perform(get("/api/v1/analysis/{id}", id))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode getRisks = mapper.readTree(getBody).path("data").path("risks");
+        JsonNode getSuggestions = mapper.readTree(getBody).path("data").path("suggestions");
+
+        assertFalse(postRisks.isEmpty());
+        assertEquals(postRisks.size(), getRisks.size());
+        for (int i = 0; i < postRisks.size(); i++) {
+            JsonNode pRisk = postRisks.get(i);
+            JsonNode gRisk = getRisks.get(i);
+            assertTrue(pRisk.hasNonNull("code"));
+            assertTrue(pRisk.hasNonNull("points"));
+            assertTrue(pRisk.hasNonNull("section"));
+            assertEquals(pRisk.path("code").asText(), gRisk.path("code").asText());
+            assertEquals(pRisk.path("points").asDouble(), gRisk.path("points").asDouble(), 0.001);
+            assertEquals(pRisk.path("section").asText(), gRisk.path("section").asText());
+        }
+
+        assertFalse(postSuggestions.isEmpty());
+        assertEquals(postSuggestions.size(), getSuggestions.size());
+        for (int i = 0; i < postSuggestions.size(); i++) {
+            JsonNode pSug = postSuggestions.get(i);
+            JsonNode gSug = getSuggestions.get(i);
+            assertTrue(pSug.hasNonNull("code"));
+            assertEquals(pSug.path("code").asText(), gSug.path("code").asText());
+        }
+    }
+
     // Metadata fields match between POST and GET
 
     @Test

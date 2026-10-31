@@ -11,7 +11,9 @@ export const setOnUnauthorized = (callback) => {
   onUnauthorizedCallback = callback;
 };
 
-const rawBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const rawBase = import.meta.env.VITE_API_BASE_URL !== undefined
+  ? import.meta.env.VITE_API_BASE_URL
+  : 'http://localhost:8080';
 const normalizedBase = rawBase.endsWith('/api/v1')
   ? rawBase
   : `${rawBase.replace(/\/+$/, '')}/api/v1`;
@@ -117,5 +119,6 @@ export const downloadReport = (id) =>
   });
 
 export const getHistory = () => client.get('/history');
+export const deleteHistoryItem = (id) => client.delete(`/history/${id}`);
 
 export default client;

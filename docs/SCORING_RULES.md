@@ -89,11 +89,16 @@ The three required sections evaluated for the ATS Compatibility missing headings
 
 ### Extraction (up to 30 keywords)
 1. **Skill Dictionary First**: Technical keywords are matched against a curated dictionary of technical terms (loaded once at startup into an immutable set from `skills.txt`). Multiword dictionary terms (e.g., "deep learning", "computer vision", "github actions", "data science", "apache spark", "apache kafka") are matched as whole phrases and preserved as ONE keyword without splitting.
-2. **TF-IDF Fallback**: Remaining keyword slots up to 30 are filled with the highest TF-IDF terms using the sentence-level mini-corpus.
+2. **TF-IDF Fallback and Fill Rules**: Remaining keyword slots up to 30 are filled with the highest TF-IDF terms using the sentence-level mini-corpus. A term is accepted in the fill step only if all of these hold:
+   - It is not in the generic words set (over 190 words).
+   - It is not in the common English words set (over 300 words, including use, user, users, store, clean, style, code, web, backend, frontend, services, service, interfaces, applications, application, build, develop, design, write, work, through, stack, sprint, team, project, projects, system, systems, tools, tool, data, and similar common words).
+   - It looks technical in the original job description text, meaning it contains a digit, dot, plus, hash or slash, or it is written in camel case or all capitals, or it is capitalized in the middle of a sentence.
+   - The fill step is limited to 8 terms. If the dictionary step found fewer than 3 keywords, the technical shape rule is relaxed and the fill is limited to 10 terms so unusual job descriptions still get keywords. The maximum of 30 keywords stays.
 3. **Generic Words Filter**: Terms in the generic words set (over 190 words, including engineer, engineers, practices, practice, evaluate, techniques, technique, degree, bachelor, master, phd, field, science, apache, and the generic phrase "computer science") and tokens shorter than 3 characters are excluded from keyword extraction and never become keywords. Multiword skills "data science", "apache spark", and "apache kafka" are in skills.txt so they stay one keyword.
 
 ### Matching Rules
 The substring contains rule and the global edit distance 2 rule are removed for all keywords.
+- **Tokenization**: In resume token extraction, for every token that contains a hyphen, its parts are added as extra tokens in addition to the whole token (e.g., jwt-based gives jwt and based). Adjacent token pairs and existing canonical rules stay unchanged.
 - **Canonical Match**: A JD keyword is matched when its canonical form equals the canonical form of a resume token, or of two adjacent resume tokens joined together.
 - **Canonical Form**:
   - Convert to lowercase with `Locale.ROOT`.
@@ -107,6 +112,8 @@ The substring contains rule and the global edit distance 2 rule are removed for 
   - `typescript` and `ts` match each other.
   - `kubernetes` and `k8s` match each other.
   - `machine learning` and `ml` match each other.
+  - `rest` and `restful` match each other as a symmetric pair.
+- **Version Suffixes**: A resume token with trailing digits (html5, css3, es6, python3, vue3, angular2) also matches a keyword equal to the token without the digits, only when at least 3 letters remain. Tokens such as s3, ec2 and mp3 are never stripped. This is one way only: resume token to keyword.
 - **Strict Fuzzy Matching**: Allowed only when the canonical keyword has at least 6 characters and the first two characters match:
   - Allowed edit distance is 1 for canonical length 6 to 8 characters.
   - Allowed edit distance is 2 for canonical length 9 or more characters.

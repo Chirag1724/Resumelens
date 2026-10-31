@@ -180,4 +180,32 @@ class SuggestionEngineTest {
         assertTrue(quantSuggestion.description().startsWith("2 bullet point(s) lack measurable outcomes."),
                 "Suggestion count of bullets lacking numbers must equal the number of bullets without a standalone number");
     }
+
+    @Test
+    void should_carryExpectedCode_forEachSuggestionType() {
+        List<SuggestionResponse> suggestions = engine.generateTopSuggestions(
+                List.of("docker"),
+                List.of("responsible for backend development"),
+                List.of("improved performance"),
+                65.0
+        );
+
+        assertEquals(4, suggestions.size());
+
+        var keywordsSuggestion = suggestions.stream().filter(s -> "KEYWORDS".equals(s.code())).findFirst().orElseThrow();
+        assertEquals("KEYWORDS", keywordsSuggestion.code());
+        assertEquals("HIGH", keywordsSuggestion.priority());
+
+        var weakVerbsSuggestion = suggestions.stream().filter(s -> "WEAK_VERBS".equals(s.code())).findFirst().orElseThrow();
+        assertEquals("WEAK_VERBS", weakVerbsSuggestion.code());
+        assertEquals("HIGH", weakVerbsSuggestion.priority());
+
+        var quantifySuggestion = suggestions.stream().filter(s -> "QUANTIFY".equals(s.code())).findFirst().orElseThrow();
+        assertEquals("QUANTIFY", quantifySuggestion.code());
+        assertEquals("MEDIUM", quantifySuggestion.priority());
+
+        var structureSuggestion = suggestions.stream().filter(s -> "STRUCTURE".equals(s.code())).findFirst().orElseThrow();
+        assertEquals("STRUCTURE", structureSuggestion.code());
+        assertEquals("LOW", structureSuggestion.priority());
+    }
 }

@@ -51,11 +51,11 @@ function TopBar() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 lg:px-12 w-full max-w-[1536px] mx-auto pt-3 sm:pt-5 pointer-events-none">
-      <nav className="pointer-events-auto rounded-2xl sm:rounded-full bg-[rgba(14,14,18,0.75)] backdrop-blur-xl border border-white/10 px-5 sm:px-8 lg:px-10 py-3 sm:py-3.5 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_30px_rgba(232,96,46,0.06)]">
+      <nav className="pointer-events-auto rounded-2xl sm:rounded-full bg-[rgba(14,14,18,0.95)] backdrop-blur-xl border border-white/10 px-5 sm:px-8 lg:px-10 py-3 sm:py-3.5 flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
         {/* Left: Brand Logo & Wordmark */}
         <Link
           to="/"
-          className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8602E] rounded-xl"
+          className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-500)] rounded-xl"
           aria-label="ResumeLens Home"
         >
           <img
@@ -72,14 +72,14 @@ function TopBar() {
         <div className="hidden md:flex items-center gap-8 lg:gap-10 text-[15px] sm:text-base font-semibold">
           <Link
             to="/"
-            className="text-neutral-300 hover:text-white transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8602E] rounded-md py-1"
+            className="text-neutral-300 hover:text-white transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-500)] rounded-md py-1"
           >
             Home
           </Link>
           <Link
             to="/history"
             onClick={handleHistoryClick}
-            className="text-neutral-300 hover:text-white transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8602E] rounded-md py-1"
+            className="text-neutral-300 hover:text-white transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-500)] rounded-md py-1"
           >
             History
           </Link>
@@ -95,7 +95,7 @@ function TopBar() {
               <button
                 type="button"
                 onClick={logout}
-                className="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-neutral-300 hover:text-red-400 hover:bg-red-500/10 border border-white/10 transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8602E]"
+                className="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-neutral-300 hover:text-red-400 hover:bg-red-500/10 border border-white/10 transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-500)]"
               >
                 Logout
               </button>
@@ -110,7 +110,7 @@ function TopBar() {
           ) : (
             <Link
               to="/login"
-              className="px-6 sm:px-7 py-2.5 sm:py-3 rounded-full text-sm sm:text-[15px] font-bold bg-[#E8602E] hover:bg-[#f06e3d] text-white transition-all duration-200 transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8602E]"
+              className="px-6 sm:px-7 py-2.5 sm:py-3 rounded-full text-sm sm:text-[15px] font-bold bg-[var(--brand-500)] hover:bg-[var(--brand-400)] text-white transition-all duration-200 transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-500)]"
             >
               Login
             </Link>
@@ -122,7 +122,7 @@ function TopBar() {
           <button
             type="button"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="p-2 rounded-xl text-neutral-300 hover:text-white hover:bg-white/10 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E8602E] cursor-pointer"
+            className="p-2 rounded-xl text-neutral-300 hover:text-white hover:bg-white/10 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-500)] cursor-pointer"
             aria-label="Toggle navigation menu"
             aria-expanded={mobileMenuOpen}
           >
@@ -179,7 +179,7 @@ function TopBar() {
             <Link
               to="/login"
               onClick={() => setMobileMenuOpen(false)}
-              className="text-center font-bold text-white bg-[#E8602E] hover:bg-[#f06e3d] py-3 rounded-xl mt-2 transition-transform active:scale-95"
+              className="text-center font-bold text-white bg-[var(--brand-500)] hover:bg-[var(--brand-400)] py-3 rounded-xl mt-2 transition-transform active:scale-95"
             >
               Login
             </Link>

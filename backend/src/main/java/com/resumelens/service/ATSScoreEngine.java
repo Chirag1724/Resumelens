@@ -238,17 +238,18 @@ public class ATSScoreEngine {
         return 4;
     }
 
-    private void recordRisk(List<RiskResponse> risks, String ruleKey, double deduction) {
-        recordRisk(risks, ruleKey, deduction, null);
+    private void recordRisk(List<RiskResponse> risks, String ruleKey, double deduction, String section) {
+        recordRisk(risks, ruleKey, deduction, null, section);
     }
 
-    private void recordRisk(List<RiskResponse> risks, String ruleKey, double deduction, String customDescription) {
+    private void recordRisk(List<RiskResponse> risks, String ruleKey, double deduction, String customDescription, String section) {
         RiskDefinition def = RISK_DEFINITIONS.get(ruleKey);
         if (def != null) {
             String desc = customDescription != null ? customDescription : def.description();
-            risks.add(new RiskResponse(def.title(), severityFromDeduction(deduction), desc, def.fix()));
+            risks.add(new RiskResponse(def.title(), severityFromDeduction(deduction), desc, def.fix(), ruleKey, deduction, section));
         }
     }
+
 
     private final TfIdfCalculator tfidf;
     private final SimilarityCalculator similarity;
@@ -325,41 +326,41 @@ public class ATSScoreEngine {
         if (missingSections > 0) {
             double deduction = Math.min(missingSections * 8.0, 24.0);
             score -= deduction;
-            recordRisk(risks, "MISSING_SECTIONS", deduction);
+            recordRisk(risks, "MISSING_SECTIONS", deduction, SectionScore.ATS_COMPATIBILITY);
         }
 
         // Contact info absent (–10)
         if (!resumeParser.hasContactInfo(resumeText)) {
             score -= 10;
-            recordRisk(risks, "NO_CONTACT_INFO", 10.0);
+            recordRisk(risks, "NO_CONTACT_INFO", 10.0, SectionScore.ATS_COMPATIBILITY);
         }
 
         // Multi-column / table layout (–10)
         if (hasFormattingRisk) {
             score -= 10;
-            recordRisk(risks, "MULTI_COLUMN_TABLE", 10.0);
+            recordRisk(risks, "MULTI_COLUMN_TABLE", 10.0, SectionScore.ATS_COMPATIBILITY);
         }
 
         // Graphics / non-standard fonts heuristic (–8)
         if (hasGraphicsRisk) {
             score -= 8;
-            recordRisk(risks, "GRAPHICS_PRESENT", 8.0);
+            recordRisk(risks, "GRAPHICS_PRESENT", 8.0, SectionScore.ATS_COMPATIBILITY);
         }
 
         // Keyword density deduction (–15 or –8, not both)
         double matchPct = calcKeywordMatchPercent(resumeText, jdKeywords);
         if (matchPct < 0.30) {
             score -= 15;
-            recordRisk(risks, "KEYWORD_DENSITY_BELOW_30", 15.0);
+            recordRisk(risks, "KEYWORD_DENSITY_BELOW_30", 15.0, SectionScore.ATS_COMPATIBILITY);
         } else if (matchPct < 0.50) {
             score -= 8;
-            recordRisk(risks, "KEYWORD_DENSITY_30_TO_50", 8.0);
+            recordRisk(risks, "KEYWORD_DENSITY_30_TO_50", 8.0, SectionScore.ATS_COMPATIBILITY);
         }
 
         // No measurable achievements (-5)
         if (!isQuantified(resumeText)) {
             score -= 5;
-            recordRisk(risks, "NO_MEASURABLE_ACHIEVEMENTS", 5.0);
+            recordRisk(risks, "NO_MEASURABLE_ACHIEVEMENTS", 5.0, SectionScore.ATS_COMPATIBILITY);
         }
 
         return Math.max(0.0, score);
@@ -474,13 +475,13 @@ public class ATSScoreEngine {
             .average().orElse(0);
         if (avgLen > 35) {
             score -= 10;
-            recordRisk(risks, "LONG_SENTENCES", 10.0);
+            recordRisk(risks, "LONG_SENTENCES", 10.0, SectionScore.WRITING_QUALITY);
         }
 
         // First-person pronouns (–15)
         if (FIRST_PERSON.matcher(resumeText).find()) {
             score -= 15;
-            recordRisk(risks, "FIRST_PERSON", 15.0);
+            recordRisk(risks, "FIRST_PERSON", 15.0, SectionScore.WRITING_QUALITY);
         }
 
         // Filler words (–3 per occurrence, max –15)
@@ -491,7 +492,7 @@ public class ATSScoreEngine {
         if (fillerCount > 0) {
             double deduction = Math.min(fillerCount * 3.0, 15.0);
             score -= deduction;
-            recordRisk(risks, "FILLER_WORDS", deduction);
+            recordRisk(risks, "FILLER_WORDS", deduction, SectionScore.WRITING_QUALITY);
         }
 
         // Repetition (-5 per over-repeated word, max -15)
@@ -524,7 +525,7 @@ public class ATSScoreEngine {
             String customDesc = (def != null ? def.description() : "Certain words appear excessively throughout the resume text.")
                 + " Words used more than 5 times: " + wordsSummary + ".";
 
-            recordRisk(risks, "REPEATED_WORDS", deduction, customDesc);
+            recordRisk(risks, "REPEATED_WORDS", deduction, customDesc, SectionScore.WRITING_QUALITY);
         }
 
         // Passive voice ratio > 40% (-10)
@@ -533,7 +534,7 @@ public class ATSScoreEngine {
             .count();
         if (sentences.length > 0 && (double) passiveCount / sentences.length > 0.40) {
             score -= 10;
-            recordRisk(risks, "PASSIVE_VOICE", 10.0);
+            recordRisk(risks, "PASSIVE_VOICE", 10.0, SectionScore.WRITING_QUALITY);
         }
 
         return Math.max(0.0, score);
@@ -555,7 +556,7 @@ public class ATSScoreEngine {
         if (spellingErrors > 0) {
             double deduction = Math.min(spellingErrors * 5.0, 20.0);
             score -= deduction;
-            recordRisk(risks, "SPELLING_ERRORS", deduction);
+            recordRisk(risks, "SPELLING_ERRORS", deduction, SectionScore.PROFESSIONALISM);
         }
 
         // Inconsistent date formatting (-10)
@@ -563,7 +564,7 @@ public class ATSScoreEngine {
         boolean hasNumeric = DATE_NUMERIC.matcher(resumeText).find();
         if (hasAlpha && hasNumeric) {
             score -= 10;
-            recordRisk(risks, "INCONSISTENT_DATES", 10.0);
+            recordRisk(risks, "INCONSISTENT_DATES", 10.0, SectionScore.PROFESSIONALISM);
         }
 
         // Inconsistent bullet style (-5)
@@ -587,20 +588,20 @@ public class ATSScoreEngine {
         }
         if (usedBulletStyles.size() > 1) {
             score -= 5;
-            recordRisk(risks, "INCONSISTENT_BULLETS", 5.0);
+            recordRisk(risks, "INCONSISTENT_BULLETS", 5.0, SectionScore.PROFESSIONALISM);
         }
 
         // Casual email address (-10)
         if (CASUAL_EMAIL.matcher(resumeText).find()) {
             score -= 10;
-            recordRisk(risks, "CASUAL_EMAIL", 10.0);
+            recordRisk(risks, "CASUAL_EMAIL", 10.0, SectionScore.PROFESSIONALISM);
         }
 
         // Resume length > 700 words estimated as > 2 pages (-5)
         long wordCount = Arrays.stream(resumeText.split("\\s+")).filter(w -> !w.isBlank()).count();
         if (wordCount > 700) {
             score -= 5;
-            recordRisk(risks, "OVER_700_WORDS", 5.0);
+            recordRisk(risks, "OVER_700_WORDS", 5.0, SectionScore.PROFESSIONALISM);
         }
 
         return Math.max(0.0, score);

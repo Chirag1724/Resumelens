@@ -9,6 +9,7 @@ import com.resumelens.entity.Resume;
 import com.resumelens.repository.JobDescriptionRepository;
 import com.resumelens.repository.MatchResultRepository;
 import com.resumelens.repository.ResumeRepository;
+import com.resumelens.repository.SectionScoreRepository;
 import com.resumelens.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,8 @@ class HistoryControllerIT {
     JobDescriptionRepository jobDescriptionRepository;
     @Autowired
     UserRepository userRepository;
+    @Autowired
+    SectionScoreRepository sectionScoreRepository;
 
     private static final String JD_TEXT = "java spring boot docker developer role";
 
@@ -165,6 +168,82 @@ class HistoryControllerIT {
 
         JsonNode items = mapper.readTree(body).path("data");
         assertEquals(50, items.size(), "History must cap returned results to latest 50");
+    }
+
+    // DELETE /api/v1/history/{id}
+
+    @Test
+    void should_deleteHistoryItemAndReturn204_whenCallerIsOwner() throws Exception {
+        UUID resumeId = uploadPdfAs(tokenA);
+        runAnalysis(resumeId, JD_TEXT, "Software Engineer");
+
+        var userA = userRepository.findByEmail(TestData.USER_EMAIL).orElseThrow();
+        var historyItems = matchResultRepository.findByResumeUserIdOrderByAnalyzedAtDesc(userA.getId(), org.springframework.data.domain.Pageable.unpaged());
+        assertEquals(1, historyItems.size());
+        MatchResult mr = historyItems.get(0);
+        UUID mrPublicId = mr.getPublicId();
+
+        var scoresBefore = sectionScoreRepository.findByMatchResultId(mr.getId());
+        assertFalse(scoresBefore.isEmpty(), "Section scores must exist before delete");
+
+        mockMvc.perform(delete("/api/v1/history/" + mrPublicId)
+                .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isNoContent());
+
+        assertFalse(matchResultRepository.findByPublicId(mrPublicId).isPresent());
+        assertTrue(sectionScoreRepository.findByMatchResultId(mr.getId()).isEmpty());
+        assertFalse(resumeRepository.findByPublicId(resumeId).isPresent());
+    }
+
+    @Test
+    void should_preserveResume_whenDeletingHistoryItemIfOtherMatchResultUsesIt() throws Exception {
+        UUID resumeId = uploadPdfAs(tokenA);
+        runAnalysis(resumeId, JD_TEXT + " v1", "Dev 1");
+        runAnalysis(resumeId, JD_TEXT + " v2", "Dev 2");
+
+        var userA = userRepository.findByEmail(TestData.USER_EMAIL).orElseThrow();
+        var historyItems = matchResultRepository.findByResumeUserIdOrderByAnalyzedAtDesc(userA.getId(), org.springframework.data.domain.Pageable.unpaged());
+        assertEquals(2, historyItems.size());
+
+        MatchResult toDelete = historyItems.get(0);
+        MatchResult toKeep = historyItems.get(1);
+
+        mockMvc.perform(delete("/api/v1/history/" + toDelete.getPublicId())
+                .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isNoContent());
+
+        assertFalse(matchResultRepository.findByPublicId(toDelete.getPublicId()).isPresent());
+        assertTrue(matchResultRepository.findByPublicId(toKeep.getPublicId()).isPresent());
+        assertTrue(resumeRepository.findByPublicId(resumeId).isPresent());
+    }
+
+    @Test
+    void should_return404_whenDeletingAnotherUsersHistoryItem() throws Exception {
+        UUID resumeIdA = uploadPdfAs(tokenA);
+        runAnalysis(resumeIdA, JD_TEXT, "Software Engineer");
+
+        var userA = userRepository.findByEmail(TestData.USER_EMAIL).orElseThrow();
+        var historyItemsA = matchResultRepository.findByResumeUserIdOrderByAnalyzedAtDesc(userA.getId(), org.springframework.data.domain.Pageable.unpaged());
+        UUID mrPublicIdA = historyItemsA.get(0).getPublicId();
+
+        mockMvc.perform(delete("/api/v1/history/" + mrPublicIdA)
+                .header("Authorization", "Bearer " + tokenB))
+                .andExpect(status().isNotFound());
+
+        assertTrue(matchResultRepository.findByPublicId(mrPublicIdA).isPresent());
+    }
+
+    @Test
+    void should_return401_whenDeletingHistoryItemUnauthenticated() throws Exception {
+        mockMvc.perform(delete("/api/v1/history/" + UUID.randomUUID()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void should_return404_whenDeletingUnknownHistoryItem() throws Exception {
+        mockMvc.perform(delete("/api/v1/history/" + UUID.randomUUID())
+                .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isNotFound());
     }
 
     // Helpers

@@ -657,6 +657,35 @@ class ATSScoreEngineTest {
         assertFalse(contactRisk.description().isBlank(), "Risk description must not be blank");
         assertNotNull(contactRisk.fix());
         assertFalse(contactRisk.fix().isBlank(), "Risk fix must not be blank");
+        assertEquals("NO_CONTACT_INFO", contactRisk.code(), "Risk code must be NO_CONTACT_INFO");
+        assertEquals(10.0, contactRisk.points(), 0.001, "Contact info deduction must be 10.0");
+        assertEquals("ATS_COMPATIBILITY", contactRisk.section(), "Risk section must be ATS_COMPATIBILITY");
+    }
+
+    @Test
+    void should_produceRiskWithWritingQualitySection_whenWritingRiskFires() {
+        String resume = TestData.GOOD_RESUME + "\nI managed the team.";
+        ATSScoreEngine.ScoreResult r = engine.score(resume, TestData.JD_TWO_TERMS, false, false);
+
+        var writingRisk = r.risks().stream()
+                .filter(rk -> "FIRST_PERSON".equals(rk.code()))
+                .findFirst().orElseThrow();
+        assertEquals("FIRST_PERSON", writingRisk.code());
+        assertEquals(15.0, writingRisk.points(), 0.001);
+        assertEquals("WRITING_QUALITY", writingRisk.section());
+    }
+
+    @Test
+    void should_produceRiskWithProfessionalismSection_whenProfessionalismRiskFires() {
+        String resume = TestData.GOOD_RESUME + "\nContact: coolcoder99@gmail.com";
+        ATSScoreEngine.ScoreResult r = engine.score(resume, TestData.JD_TWO_TERMS, false, false);
+
+        var profRisk = r.risks().stream()
+                .filter(rk -> "CASUAL_EMAIL".equals(rk.code()))
+                .findFirst().orElseThrow();
+        assertEquals("CASUAL_EMAIL", profRisk.code());
+        assertEquals(10.0, profRisk.points(), 0.001);
+        assertEquals("PROFESSIONALISM", profRisk.section());
     }
 
     @Test

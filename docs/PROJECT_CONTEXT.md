@@ -6,7 +6,7 @@
 
 ## Project Summary
 
-ResumeLens is a web-based system that evaluates a candidate's resume against a target job description and predicts ATS (Applicant Tracking System) compatibility. It accepts a resume (text or PDF) and a job description as input, then scores and analyses the match using self-implemented text-processing algorithms — TF-IDF for keyword weighting, Cosine Similarity for semantic relevance measurement, and Levenshtein Distance for fuzzy skill matching. The backend is built with Spring Boot and exposes a REST API consumed by a React (Vite) single-page frontend, with all persistent data stored in a PostgreSQL database (hosted on Supabase). The system produces a structured multi-dimensional score, a section-by-section breakdown, and a copyable AI-prompt that users can take to an external assistant to get resume improvement advice — the system itself never calls any AI or LLM API.
+ResumeLens is a web-based system that evaluates a candidate's resume against a target job description and predicts ATS (Applicant Tracking System) compatibility. It accepts a resume (PDF or DOCX) and a job description as input, then scores and analyses the match using self-implemented text-processing algorithms: TF-IDF for keyword weighting, Cosine Similarity for semantic relevance measurement, and Levenshtein Distance for fuzzy skill matching. The backend is built with Spring Boot and exposes a REST API consumed by a React (Vite) single-page frontend, with all persistent data stored in a PostgreSQL database (hosted on Supabase). The system produces a structured multi-dimensional score, a section-by-section breakdown, and a copyable AI-prompt that users can take to an external assistant to get resume improvement advice; the system itself never calls any AI or LLM API.
 
 ---
 
@@ -33,10 +33,12 @@ The following features are **explicitly out of scope** and must **never** be add
 
 2. **No paid API dependencies.** No feature, at any point in the project, should require a paid third-party API key or subscription to function.
 
-3. **Guest-first design.** Login is optional everywhere. Guest usage — uploading a resume, entering a job description, and receiving a full score — must always remain fully functional without an account. Authenticated sessions only add persistence (saved history); they never gate core features.
+3. **Guest-first design.** Login is optional everywhere. Guest usage (uploading a resume, entering a job description, and receiving a full score) must always remain fully functional without an account. Authenticated sessions only add persistence (saved history); they never gate core features.
 
 4. **AI-prompt pattern for improvement suggestions.** The resume-improvement feature works by generating a structured text prompt that the user copies and pastes into an external AI assistant (e.g., ChatGPT, Gemini) manually. The system itself never calls an AI API. Any code that attempts to call an external AI endpoint violates this principle and must be flagged.
 
 5. **Thin controllers, rich services.** Controllers must only handle HTTP parsing, validation delegation, and response wrapping. All business logic lives in the service layer.
 
 6. **DTO boundary.** JPA entities must never be returned directly from REST controllers. All API responses use dedicated DTO/response objects.
+
+7. **Data handling and retention.** Original PDF and DOCX files are parsed in memory and discarded. Only extracted text is persisted in PostgreSQL to enable capability URL report retrieval. Resumes and evaluations submitted by guests are purged daily after a retention period (RETENTION_DAYS, default 7 days). Authenticated users can permanently delete their saved evaluations at any time.

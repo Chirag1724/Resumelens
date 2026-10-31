@@ -69,11 +69,11 @@ const WORKFLOW_STEPS = [
     step: 1,
     badge: 'Step 01 &bull; Ingestion',
     title: 'Client-Side Ingestion & Privacy Guard',
-    tagline: 'Zero raw resumes stored on disk',
+    tagline: 'Original file not kept; only extracted text',
     description:
-      'Upload any PDF or DOCX resume. Our parser immediately extracts structural text in memory and validates parser compatibility without permanently saving your file.',
+      'Upload any PDF or DOCX resume. The original file is not kept, only the extracted text so the report link works. Guest data is deleted after the retention period.',
     highlights: [
-      '100% ephemeral processing (no raw documents retained)',
+      'Original file is not kept; guest data deleted after retention period',
       'High-fidelity Apache PDFBox & POI text extraction',
       'Instant validation for unreadable font encodings',
     ],
@@ -173,7 +173,7 @@ export default function LandingPage() {
                   Results in seconds
                 </div>
                 <div className="px-3.5 sm:px-4 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-xs sm:text-sm font-medium text-neutral-300">
-                  File is not stored, only extracted text
+                  Original file not kept; guest data deleted after retention period
                 </div>
                 <div className="px-3.5 sm:px-4 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-xs sm:text-sm font-medium text-neutral-300">
                   Every score explained

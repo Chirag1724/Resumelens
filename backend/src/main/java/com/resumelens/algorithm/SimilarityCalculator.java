@@ -2,7 +2,6 @@ package com.resumelens.algorithm;
 
 import org.springframework.stereotype.Component;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Self-implemented Cosine Similarity, Levenshtein Distance, and canonical keyword matching.
@@ -22,7 +21,9 @@ public class SimilarityCalculator {
         Map.entry("kubernetes", Set.of("k8s")),
         Map.entry("k8s", Set.of("kubernetes")),
         Map.entry("machinelearning", Set.of("ml")),
-        Map.entry("ml", Set.of("machinelearning"))
+        Map.entry("ml", Set.of("machinelearning")),
+        Map.entry("rest", Set.of("restful")),
+        Map.entry("restful", Set.of("rest"))
     );
 
     /**
@@ -96,13 +97,24 @@ public class SimilarityCalculator {
 
     /**
      * Splits resume text into tokens preserving characters used in technical terms (+, #, ., -).
+     * For every token that contains a hyphen, adds its parts as extra tokens in addition to the whole token.
      */
     public List<String> extractResumeTokens(String resumeText) {
         if (resumeText == null || resumeText.isBlank()) return List.of();
-        String cleaned = resumeText.replaceAll("[,;:|/\\n\\r\\t(){}\\[\\]\"'`*•–—]", " ");
-        return Arrays.stream(cleaned.trim().split("\\s+"))
-            .filter(t -> !t.isBlank())
-            .collect(Collectors.toList());
+        String cleaned = resumeText.replaceAll("[,;:|/\\n\\r\\t(){}\\[\\]\"'`*•\\u2013\\u2014]", " ");
+        List<String> result = new ArrayList<>();
+        for (String t : cleaned.trim().split("\\s+")) {
+            if (t.isBlank()) continue;
+            result.add(t);
+            if (t.contains("-")) {
+                for (String part : t.split("-+")) {
+                    if (!part.isBlank()) {
+                        result.add(part);
+                    }
+                }
+            }
+        }
+        return result;
     }
 
     /**
@@ -153,6 +165,14 @@ public class SimilarityCalculator {
             }
         }
 
+        // 1c. Version suffix match: resume token with trailing digits matches keyword equal to token without digits
+        for (String ct : canonicalTokens) {
+            if (matchesVersionSuffix(canonicalKw, ct)) return true;
+        }
+        for (String at : adjacentTokens) {
+            if (matchesVersionSuffix(canonicalKw, at)) return true;
+        }
+
         // 2. Fuzzy match: allowed only for keywords with at least 6 characters
         int kwLen = canonicalKw.length();
         if (kwLen < 6) {
@@ -183,6 +203,28 @@ public class SimilarityCalculator {
             }
         }
 
+        return false;
+    }
+
+    /**
+     * Resume token with trailing digits (html5, css3, es6, python3, vue3, angular2) matches
+     * a keyword equal to the token without the digits, only when at least 3 letters remain.
+     * Tokens such as s3, ec2 and mp3 are never stripped.
+     * One way only: resume token to keyword.
+     */
+    private boolean matchesVersionSuffix(String canonicalKw, String resumeToken) {
+        if (resumeToken == null || resumeToken.length() < 4) return false;
+        int i = resumeToken.length() - 1;
+        while (i >= 0 && Character.isDigit(resumeToken.charAt(i))) {
+            i--;
+        }
+        if (i == resumeToken.length() - 1) {
+            return false;
+        }
+        String stripped = resumeToken.substring(0, i + 1);
+        if (stripped.length() >= 3 && stripped.chars().allMatch(Character::isLetter)) {
+            return canonicalKw.equals(stripped);
+        }
         return false;
     }
 }

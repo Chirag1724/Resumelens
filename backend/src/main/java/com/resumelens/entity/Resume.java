@@ -79,6 +79,7 @@ public class Resume {
     public String getFileName() { return fileName; }
     public String getRawText() { return rawText; }
     public LocalDateTime getUploadedAt() { return uploadedAt; }
+    public void setUploadedAt(LocalDateTime uploadedAt) { this.uploadedAt = uploadedAt; }
     public String getTargetRole() { return targetRole; }
     public Integer getExperienceYears() { return experienceYears; }
     public boolean hasGraphicsRisk() { return hasGraphicsRisk; }

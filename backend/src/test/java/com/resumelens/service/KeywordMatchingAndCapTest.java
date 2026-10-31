@@ -195,4 +195,30 @@ class KeywordMatchingAndCapTest {
         assertEquals(scoreResult.missingKeywords(), suggestionMissing,
                 "Suggestion missing keywords must equal Skills Validation missing keywords list");
     }
+
+    /**
+     * (i) For a resume containing React.js, Next.js, Node.js, Express.js, MongoDB, TypeScript,
+     * Tailwind CSS and GitHub Actions against the multi-line web dev JD, the missing list is empty.
+     */
+    @Test
+    void testI_matchingResumeHasEmptyMissingKeywordsList() {
+        String jd = String.join("\n",
+                "Build user interfaces with ReactJS and NextJS",
+                "Develop backend services using Node JS and Express JS",
+                "Store data in Mongo DB",
+                "Write clean code in Typescript",
+                "Style applications with Tailwind and use Github Actions for deployment"
+        );
+        String resume = "EDUCATION\nBachelor of Science\nEXPERIENCE\n" +
+                "Full stack engineer\n" +
+                "SKILLS\n" +
+                "React.js, Next.js, Node.js, Express.js, MongoDB, TypeScript, Tailwind CSS and GitHub Actions";
+
+        ATSScoreEngine.ScoreResult scoreResult = engine.score(resume, jd, false, false);
+        assertTrue(scoreResult.missingKeywords().isEmpty(),
+                "Missing keywords list must be empty, but had: " + scoreResult.missingKeywords());
+        List<String> suggestionMissing = suggestionEngine.findMissingKeywords(resume, jd);
+        assertTrue(suggestionMissing.isEmpty(),
+                "Suggestion missing list must be empty, but had: " + suggestionMissing);
+    }
 }

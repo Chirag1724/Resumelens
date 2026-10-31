@@ -21,8 +21,12 @@ jobs:
     steps:
       - name: Send Heartbeat to ResumeLens Backend
         env:
-          TARGET_URL: ${{ secrets.BACKEND_URL || 'https://resumelens-backend.onrender.com' }}
+          TARGET_URL: ${{ secrets.BACKEND_URL }}
         run: |
+          if [ -z "$TARGET_URL" ]; then
+            echo "Notice: BACKEND_URL secret is not set. Skipping heartbeat request."
+            exit 0
+          fi
           echo "Sending heartbeat to $TARGET_URL/api/v1/health ..."
           RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" "$TARGET_URL/api/v1/health" || true)
           echo "Response: $RESPONSE"

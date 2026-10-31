@@ -107,7 +107,8 @@ public class SuggestionEngine {
                 "Add missing JD keywords",
                 "Your resume is missing " + missingKeywords.size() + " keywords from the job description. "
                     + "Incorporate them naturally where they genuinely apply.",
-                "Consider adding: " + topMissing
+                "Consider adding: " + topMissing,
+                "KEYWORDS"
             ));
         }
 
@@ -117,7 +118,8 @@ public class SuggestionEngine {
                 "Replace weak action verbs",
                 "Found " + weakVerbLines.size() + " instance(s) of weak or passive phrasing. "
                     + "Strong action verbs improve both readability and ATS scoring.",
-                weakVerbLines.get(0)
+                weakVerbLines.get(0),
+                "WEAK_VERBS"
             ));
         }
 
@@ -127,7 +129,8 @@ public class SuggestionEngine {
                 "Quantify your achievements",
                 unquantifiedBullets.size() + " bullet point(s) lack measurable outcomes. "
                     + "Adding numbers, percentages, or scale significantly increases impact score.",
-                "E.g.: \"Reduced build time by 40%\" or \"Managed a team of 8 engineers\""
+                "E.g.: \"Reduced build time by 40%\" or \"Managed a team of 8 engineers\"",
+                "QUANTIFY"
             ));
         }
 
@@ -138,7 +141,8 @@ public class SuggestionEngine {
                 "Your ATS Compatibility score is below the Strong Match threshold. "
                     + "Ensure standard section headings (Education, Experience, Skills) are present "
                     + "and contact information is clearly visible.",
-                "Standard headings: EXPERIENCE, EDUCATION, SKILLS, PROJECTS"
+                "Standard headings: EXPERIENCE, EDUCATION, SKILLS, PROJECTS",
+                "STRUCTURE"
             ));
         }
 

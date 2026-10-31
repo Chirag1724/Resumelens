@@ -302,7 +302,11 @@ export default function HistoryPage() {
 
             <div className="space-y-3">
               {items.map((item) => (
-                <HistoryCard key={item.id} item={item} />
+                <HistoryCard
+                  key={item.id}
+                  item={item}
+                  onDelete={(deletedId) => setItems((prev) => prev.filter((i) => i.id !== deletedId))}
+                />
               ))}
             </div>
           </div>

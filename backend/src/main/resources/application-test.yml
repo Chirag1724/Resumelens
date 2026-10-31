@@ -28,3 +28,9 @@ app:
   jwt:
     secret: test-jwt-secret-key-minimum-32-characters-long
     expiration-ms: 3600000
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true

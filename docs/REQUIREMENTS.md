@@ -137,37 +137,48 @@ Page structure, design tokens, and interactions match [FRONTEND_DESIGN.md](file:
   - Text: `"ResumeLens. Scores are rule based estimates and do not guarantee any ATS result."`
   - No fake user counts, testimonials, or fabricated statistics.
 
-### 3.3 Report Page (`/report/:id`)
-Structured in exact sequential order:
-1. **Top Row**:
-   - `ScoreGauge` card with overall score and tier label.
-   - File info card with file name, scan date, target role, and years of experience (missing optional values hidden).
-2. **Quick Insights (Four Cards from API Data Only)**:
-   - Overall score tier.
-   - Keywords matched versus total, with missing count.
-   - High and medium risk counts.
-   - Weakest section name and score.
-3. **Summary Card**:
-   - Fixed sentence template: `"Your resume scored {score} out of 100, rated {tier}. Strongest area: {name} ({score}). Weakest area: {name} ({score}). {n} high severity risks and {m} missing keywords were found."`
-   - Singular and plural handling for risk and missing keyword counts.
-   - When `{n}` is 0, the phrase becomes: `"No high severity risks were found."`.
-4. **Strengths and Improvements**:
-   - Strengths: Categories scoring `STRONG` or `EXCELLENT`, listed with section name and score.
-   - Improvements: Categories scoring `WEAK` or `POOR`, listed with section name and score.
-5. **Six Section Bars**:
-   - Horizontal progress bars for each dimension with score, weight, status pill, and feedback.
-6. **Six Detail Cards**:
-   - Card for each dimension with icon, score out of 100, tier label, thin progress bar, and one short fixed sentence describing what the category measures.
-7. **Risks and Keyword Analysis**:
-   - Side-by-side layout: expandable Risks on left (severity badge, description, fix); Keyword analysis on right (matched and missing skill pills, no percentages).
-8. **Top Suggestions**:
-   - Horizontal row of suggestion cards (priority badge, title, description, example).
-9. **Re-analyze Card**:
-   - Bottom card with text `"Updated your resume? Scan it again."` and a `"Re-analyze"` button linking to `/`.
-10. **Action Buttons**:
-    - `"Download PDF report"`
-    - `"Generate fix prompt"`
-    - `"Copy link"` with helper text: `"anyone with the link can view this report"`.
+### 3.3 Report Page (`/report/:id`) - Redesigned Layout
+0. **Header**:
+   - Page heading: h1 "Your resume report".
+   - Metadata chips for file name, target role, years of experience, and scan date (empty values hidden).
+   - Monospace report ID with copy action.
+   - Primary action "Improve my resume" (opens FixPromptModal), secondary actions "Download PDF report" and "Copy link" with helper text: "Anyone with the link can view this report."
+- **Sticky In-Page Navigation**:
+  - Sticky nav under the top bar with links: Overview, Action plan, Job match, Score breakdown, Things to fix, Details.
+  - Active section tracked using IntersectionObserver. Collapses to scrollable chip row on mobile.
+1. **Overview (`id="overview"`)**:
+   - Two columns on desktop (5 and 7 cols), stacked on mobile.
+   - Left card (radius 18px): ScoreGauge with overall score and tier label; segmented scale bar showing five tiers with marker at current score and ranges from TIER_RANGES; capped notice when score is capped.
+   - Right card (radius 18px): Verdict headline and body from verdictFor; "Start here" top three action plan items with effort chips; "See all steps" link to action plan.
+   - Four summary fact cards below: Skills covered, Things to fix, Strongest area, Needs most work.
+2. **Action Plan (`id="plan"`)**:
+   - Subtitle: "Do these in order. The first ones help the most."
+   - Numbered cards with title, why, how, importance chip, effort chip, gain text chip.
+   - "Show example" disclosure with Before and After rows when present.
+   - "From your resume" quote block when present.
+   - "Mark as done" checkbox in React state only (completed cards calmer with check icon, not hidden).
+   - Empty state: "No action needed. Your resume matches this job well."
+3. **Job Match (`id="job-match"`)**:
+   - Sentence with count and percent: "You cover {matched} of {total} skills this job asks for ({percent}%)".
+   - Two-part bar for matched and missing proportions.
+   - Keyword band sentence ("Great coverage.", "Decent coverage. Add the missing skills you have.", "Low coverage. Many of the job's skills are missing.").
+   - Two groups of pills: "Skills you already show" (check icon) and "Skills the job asks for that we did not find" (plus icon).
+   - Guidance box: "How to add a skill the right way" with three rules.
+4. **Score Breakdown (`id="breakdown"`)**:
+   - Six category cards in order of CATEGORIES (2 cols on tablet/desktop, 1 on mobile).
+   - Shows label, weight chip, score out of 100 with progress bar and tier label, points earned, what sentence, qualitative meaning line, and "How to improve" tips (or "Nothing to fix here." when score >= 85).
+5. **Things to Fix (`id="issues"`)**:
+   - Subtitle: "These are the same items as the action plan, with more detail."
+   - Grouped by severity: Important (HIGH), Worth fixing (MEDIUM), Small polish (LOW).
+   - Accordion buttons with friendly title, importance chip, effort chip; panel shows What we found (with word list appended for repeated words), Why it matters, How to fix it, Before and After examples. HIGH items start expanded.
+   - Empty state: "We found no layout, writing or formatting problems."
+6. **Details (`id="details"`)**:
+   - Accordion 1: "How this score is calculated" (category table with weights, scores, points earned, formula line, tier ranges, and limit rule when relevant).
+   - Accordion 2: "What this report cannot tell you" (DISCLAIMER plus limitations bullets).
+   - Accordion 3: "Terms used" (from GLOSSARY: ATS, keyword, tier).
+7. **Next Steps**:
+   - Two cards: "Improve your wording" (three steps and button opening FixPromptModal) and "Updated your resume?" (Re-analyze button linking to /).
+   - Footer line with fixed DISCLAIMER.
 
 #### Features Deliberately Excluded (No Backend API Data)
 - Resume document preview canvas or iframe.

@@ -1,63 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import {
-  FileCheck,
-  Cpu,
-  TrendingUp,
-  Layers,
-  PenTool,
-  ShieldCheck,
-  Download,
-  Sparkles,
-  Copy,
-  Check,
-  AlertTriangle,
-  ArrowLeft,
-  RotateCcw,
-  CheckCircle2,
-  AlertCircle,
-  FileText,
-} from 'lucide-react';
 import { getAnalysis, downloadReport } from '../api/client';
-import { getScoreDetails } from '../lib/score';
-import { SCORING_CATEGORIES } from '../lib/scoring';
-import ScoreGauge from '../components/ScoreGauge';
-import InfoCard from '../components/InfoCard';
-import InsightCard from '../components/InsightCard';
-import SummaryCard from '../components/SummaryCard';
-import SectionScoreBar from '../components/SectionScoreBar';
-import SectionDetailCard from '../components/SectionDetailCard';
-import KeywordPill from '../components/KeywordPill';
-import RiskCard from '../components/RiskCard';
-import SuggestionCard from '../components/SuggestionCard';
 import FixPromptModal from '../components/FixPromptModal';
-import CtaCard from '../components/CtaCard';
+import ReportSkeleton from '../components/ReportSkeleton';
+import ReportHeader from '../components/ReportHeader';
+import ReportNav from '../components/ReportNav';
+import OverviewSection from '../components/OverviewSection';
+import ActionPlanSection from '../components/ActionPlanSection';
+import JobMatchSection from '../components/JobMatchSection';
+import ScoreBreakdownSection from '../components/ScoreBreakdownSection';
+import ThingsToFixSection from '../components/ThingsToFixSection';
+import DetailsSection from '../components/DetailsSection';
+import NextStepsSection from '../components/NextStepsSection';
+import { AlertTriangle, AlertCircle, ArrowLeft, RotateCcw } from 'lucide-react';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-const DIMENSION_ICONS = {
-  ATS_COMPATIBILITY: FileCheck,
-  SKILLS_VALIDATION: Cpu,
-  IMPACT_ACHIEVEMENTS: TrendingUp,
-  PROJECT_QUALITY: Layers,
-  WRITING_QUALITY: PenTool,
-  PROFESSIONALISM: ShieldCheck,
-};
-
-function parseKeywords(raw) {
-  if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === 'string') {
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    } catch {
-      return raw.split(',').map((s) => s.trim()).filter(Boolean);
-    }
-  }
-  return [];
-}
 
 export default function ReportPage() {
   const { id } = useParams();
@@ -96,9 +53,9 @@ export default function ReportPage() {
 
   useEffect(() => {
     if (data?.fileName) {
-      document.title = `${data.fileName} - Analysis Report - ResumeLens`;
+      document.title = `${data.fileName} - ATS Analysis Report - ResumeLens`;
     } else {
-      document.title = 'Analysis Report - ResumeLens';
+      document.title = 'ATS Analysis Report - ResumeLens';
     }
   }, [data]);
 
@@ -110,7 +67,10 @@ export default function ReportPage() {
       const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'ats-report.pdf');
+      link.setAttribute(
+        'download',
+        `${data?.fileName ? data.fileName.replace(/\.[^/.]+$/, '') : 'ats'}-report.pdf`
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -122,289 +82,88 @@ export default function ReportPage() {
     }
   };
 
-  const handleCopyLink = async () => {
-    const currentUrl = window.location.href;
-    let copied = false;
+  const copyToClipboard = async (text) => {
     if (navigator.clipboard && window.isSecureContext) {
       try {
-        await navigator.clipboard.writeText(currentUrl);
-        copied = true;
+        await navigator.clipboard.writeText(text);
+        return true;
       } catch {
-        copied = false;
+        // Fallback
       }
     }
-    if (!copied) {
-      try {
-        const textArea = document.createElement('textarea');
-        textArea.value = currentUrl;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        copied = document.execCommand('copy');
-        textArea.remove();
-      } catch {
-        copied = false;
-      }
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const success = document.execCommand('copy');
+      textArea.remove();
+      return success;
+    } catch {
+      return false;
     }
-    if (copied) {
+  };
+
+  const handleCopyLink = async () => {
+    const success = await copyToClipboard(window.location.href);
+    if (success) {
       setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
+      setTimeout(() => setCopySuccess(false), 2200);
     }
   };
 
   // Invalid UUID format shows 404 not found
   if (!isValidUuid) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] px-4 text-center">
-        <div className="w-12 h-12 rounded-full bg-[rgba(239,68,68,0.12)] border border-[var(--danger)] flex items-center justify-center mb-4 text-[var(--danger)]">
-          <AlertTriangle className="w-6 h-6" />
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] px-4 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-[var(--danger)]/15 border border-[var(--danger)] flex items-center justify-center mb-5 text-[var(--danger)] shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+          <AlertTriangle className="w-7 h-7" aria-hidden="true" />
         </div>
-        <h1 className="text-2xl font-bold font-heading text-[var(--text)] mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold font-heading text-[var(--text)] mb-3">
           Report Not Found
         </h1>
-        <p className="text-sm text-[var(--text-secondary)] max-w-md mb-6">
-          The requested report identifier is not a valid UUID format.
+        <p className="text-sm text-[var(--text-secondary)] max-w-md mb-8 leading-relaxed">
+          The requested report identifier is invalid. Please check the URL or analyze your resume again.
         </p>
         <Link
           to="/"
-          className="inline-flex items-center gap-2 py-2 px-4 bg-[var(--bg-elevated)] hover:bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text)] text-sm font-medium rounded-[9px] transition-colors"
+          className="inline-flex items-center gap-2.5 py-2.5 px-5 bg-[var(--bg-elevated)] hover:bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--border-strong)] text-[var(--text)] text-sm font-semibold rounded-[9px] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-500)]"
         >
-          <ArrowLeft className="w-4 h-4 text-[var(--text-secondary)]" />
-          <span>Return to Home</span>
+          <ArrowLeft className="w-4 h-4 text-[var(--text-secondary)]" aria-hidden="true" />
+          <span>Return to Scanner</span>
         </Link>
       </div>
     );
   }
 
-  // Loading skeleton state
+  // Loading skeleton state matching the new layout
   if (loading) {
-    return (
-      <div className="w-full max-w-6xl xl:max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 animate-pulse">
-        {/* 1. Action bar skeleton */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-16 h-3 bg-[var(--bg-elevated)] rounded" />
-            <div className="w-36 h-6 bg-[var(--bg-elevated)] rounded-[6px]" />
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="w-36 h-8 bg-[var(--bg-elevated)] rounded-[9px]" />
-            <div className="w-36 h-8 bg-[var(--bg-elevated)] rounded-[9px]" />
-            <div className="w-28 h-8 bg-[var(--bg-elevated)] rounded-[9px]" />
-          </div>
-        </div>
-
-        {/* 2. Top row: Score Gauge + File Info */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
-          {/* Gauge card (md:col-span-5) */}
-          <div className="md:col-span-5 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 flex flex-col items-center justify-center text-center min-h-[300px]">
-            <div className="w-28 h-3.5 bg-[var(--bg-elevated)] rounded mb-6" />
-            <div className="w-44 h-44 rounded-full border-8 border-[var(--bg-elevated)] flex flex-col items-center justify-center p-4">
-              <div className="w-16 h-10 bg-[var(--bg-elevated)] rounded mb-2" />
-              <div className="w-24 h-5 bg-[var(--bg-elevated)] rounded-full" />
-            </div>
-          </div>
-
-          {/* File info card (md:col-span-7) */}
-          <div className="md:col-span-7 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 flex flex-col justify-between min-h-[300px]">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-[8px] bg-[rgba(232,96,46,0.12)] border border-[rgba(232,96,46,0.25)] shrink-0" />
-                <div className="space-y-1.5 flex-1">
-                  <div className="w-56 h-5 bg-[var(--bg-elevated)] rounded" />
-                  <div className="w-32 h-3.5 bg-[var(--bg-elevated)] rounded" />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mb-6">
-                <div className="w-28 h-6 bg-[var(--bg-elevated)] rounded-full" />
-                <div className="w-24 h-6 bg-[var(--bg-elevated)] rounded-full" />
-                <div className="w-36 h-6 bg-[var(--bg-elevated)] rounded-full" />
-              </div>
-            </div>
-
-            <div className="space-y-2 pt-4 border-t border-[var(--border)]">
-              <div className="w-full h-3.5 bg-[var(--bg-elevated)] rounded" />
-              <div className="w-4/5 h-3.5 bg-[var(--bg-elevated)] rounded" />
-              <div className="w-3/5 h-3.5 bg-[var(--bg-elevated)] rounded" />
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Quick insights row: 4 cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-5 flex flex-col justify-between h-32"
-            >
-              <div className="flex items-center justify-between">
-                <div className="w-8 h-8 rounded-[8px] bg-[var(--bg-elevated)]" />
-                <div className="w-14 h-4 bg-[var(--bg-elevated)] rounded-[4px]" />
-              </div>
-              <div>
-                <div className="w-16 h-7 bg-[var(--bg-elevated)] rounded mb-1.5" />
-                <div className="w-28 h-3.5 bg-[var(--bg-elevated)] rounded mb-1" />
-                <div className="w-36 h-2.5 bg-[var(--bg-elevated)] rounded" />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* 4. Summary card skeleton */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 space-y-3">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-6 h-6 rounded-[6px] bg-[rgba(232,96,46,0.12)] shrink-0" />
-            <div className="w-20 h-3.5 bg-[var(--bg-elevated)] rounded" />
-          </div>
-          <div className="w-full h-4 bg-[var(--bg-elevated)] rounded" />
-          <div className="w-11/12 h-4 bg-[var(--bg-elevated)] rounded" />
-          <div className="w-3/4 h-4 bg-[var(--bg-elevated)] rounded" />
-        </div>
-
-        {/* 5. Strengths and Improvements (2 columns) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Strengths card */}
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 space-y-3">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-2.5 h-2.5 rounded-full bg-[rgba(0,164,109,0.3)]" />
-              <div className="w-24 h-4 bg-[var(--bg-elevated)] rounded" />
-            </div>
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between p-3 rounded-[9px] bg-[var(--bg-page)] border border-[var(--border)]"
-              >
-                <div className="w-36 h-3.5 bg-[var(--bg-elevated)] rounded" />
-                <div className="w-20 h-5 bg-[var(--bg-elevated)] rounded-[4px]" />
-              </div>
-            ))}
-          </div>
-
-          {/* Improvements card */}
-          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 space-y-3">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-2.5 h-2.5 rounded-full bg-[rgba(255,155,0,0.3)]" />
-              <div className="w-28 h-4 bg-[var(--bg-elevated)] rounded" />
-            </div>
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between p-3 rounded-[9px] bg-[var(--bg-page)] border border-[var(--border)]"
-              >
-                <div className="w-36 h-3.5 bg-[var(--bg-elevated)] rounded" />
-                <div className="w-20 h-5 bg-[var(--bg-elevated)] rounded-[4px]" />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 6. Section Bars (Dimension Breakdown) */}
-        <div className="space-y-3">
-          <div className="mb-4">
-            <div className="w-28 h-3.5 bg-[var(--bg-elevated)] rounded mb-1.5" />
-            <div className="w-56 h-5 bg-[var(--bg-elevated)] rounded" />
-          </div>
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-4 flex flex-col gap-2"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-6 h-6 rounded-[6px] bg-[var(--bg-elevated)]" />
-                  <div className="w-36 h-4 bg-[var(--bg-elevated)] rounded" />
-                  <div className="w-12 h-4 bg-[var(--bg-elevated)] rounded-full" />
-                </div>
-                <div className="w-16 h-5 bg-[var(--bg-elevated)] rounded" />
-              </div>
-              <div className="w-full h-2 rounded-full bg-[var(--bg-elevated)]" />
-            </div>
-          ))}
-        </div>
-
-        {/* 7. Risks and Keyword Analysis Row */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-          {/* Risks Skeleton (md:col-span-6) */}
-          <div className="md:col-span-6 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 space-y-4">
-            <div className="w-32 h-3.5 bg-[var(--bg-elevated)] rounded" />
-            <div className="w-44 h-5 bg-[var(--bg-elevated)] rounded mb-4" />
-            {[...Array(2)].map((_, i) => (
-              <div
-                key={i}
-                className="p-4 rounded-[10px] bg-[var(--bg-elevated)] border border-[var(--border)] space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="w-40 h-4 bg-[var(--bg-card)] rounded" />
-                  <div className="w-16 h-4 bg-[var(--bg-card)] rounded-full" />
-                </div>
-                <div className="w-full h-3 bg-[var(--bg-card)] rounded" />
-                <div className="w-3/4 h-3 bg-[var(--bg-card)] rounded" />
-              </div>
-            ))}
-          </div>
-
-          {/* Keyword Analysis Skeleton (md:col-span-6) */}
-          <div className="md:col-span-6 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 space-y-5">
-            <div>
-              <div className="w-28 h-3.5 bg-[var(--bg-elevated)] rounded" />
-              <div className="w-40 h-5 bg-[var(--bg-elevated)] rounded mt-1" />
-            </div>
-
-            {/* Matched pills skeleton */}
-            <div>
-              <div className="w-32 h-3.5 bg-[var(--bg-elevated)] rounded mb-3" />
-              <div className="flex flex-wrap gap-2">
-                {[20, 24, 16, 28, 20, 32].map((w, i) => (
-                  <div
-                    key={i}
-                    className="h-6 rounded-full bg-[rgba(0,164,109,0.10)] border border-[rgba(0,164,109,0.20)]"
-                    style={{ width: `${w * 4}px` }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Missing pills skeleton */}
-            <div className="pt-4 border-t border-[var(--border)]">
-              <div className="w-32 h-3.5 bg-[var(--bg-elevated)] rounded mb-3" />
-              <div className="flex flex-wrap gap-2">
-                {[24, 20, 28, 16, 24].map((w, i) => (
-                  <div
-                    key={i}
-                    className="h-6 rounded-full bg-[rgba(255,155,0,0.10)] border border-[rgba(255,155,0,0.20)]"
-                    style={{ width: `${w * 4}px` }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <ReportSkeleton />;
   }
 
   // 404 not found error state
   if (error && error.status === 404) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] px-4 text-center">
-        <div className="w-12 h-12 rounded-full bg-[rgba(239,68,68,0.12)] border border-[var(--danger)] flex items-center justify-center mb-4 text-[var(--danger)]">
-          <AlertTriangle className="w-6 h-6" />
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] px-4 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-[var(--danger)]/15 border border-[var(--danger)] flex items-center justify-center mb-5 text-[var(--danger)] shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+          <AlertTriangle className="w-7 h-7" aria-hidden="true" />
         </div>
-        <h1 className="text-2xl font-bold font-heading text-[var(--text)] mb-2">
-          Report Not Found
+        <h1 className="text-2xl sm:text-3xl font-bold font-heading text-[var(--text)] mb-3">
+          Report Expired or Not Found
         </h1>
-        <p className="text-sm text-[var(--text-secondary)] max-w-md mb-6">
-          No analysis result was found for this report ID. It may have expired or been removed.
+        <p className="text-sm text-[var(--text-secondary)] max-w-md mb-8 leading-relaxed">
+          No analysis result was found for this report ID. The link may have expired or was typed incorrectly.
         </p>
         <Link
           to="/"
-          className="inline-flex items-center gap-2 py-2 px-4 bg-[var(--bg-elevated)] hover:bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text)] text-sm font-medium rounded-[9px] transition-colors"
+          className="inline-flex items-center gap-2.5 py-2.5 px-5 bg-[var(--brand-500)] hover:bg-[var(--brand-600)] text-[var(--on-brand)] text-sm font-semibold rounded-[9px] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-500)]"
         >
-          <ArrowLeft className="w-4 h-4 text-[var(--text-secondary)]" />
-          <span>Return to Home</span>
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+          <span>Scan a Resume Now</span>
         </Link>
       </div>
     );
@@ -413,536 +172,82 @@ export default function ReportPage() {
   // Other error state with retry button
   if (error || !data) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] px-4 text-center">
-        <div className="w-12 h-12 rounded-full bg-[rgba(239,68,68,0.12)] border border-[var(--danger)] flex items-center justify-center mb-4 text-[var(--danger)]">
-          <AlertCircle className="w-6 h-6" />
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] px-4 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-[var(--danger)]/15 border border-[var(--danger)] flex items-center justify-center mb-5 text-[var(--danger)] shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+          <AlertCircle className="w-7 h-7" aria-hidden="true" />
         </div>
-        <h1 className="text-2xl font-bold font-heading text-[var(--text)] mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold font-heading text-[var(--text)] mb-3">
           Unable to Load Report
         </h1>
-        <p className="text-sm text-[var(--text-secondary)] max-w-md mb-6">
-          {error?.message || 'An unexpected error occurred while fetching the analysis report.'}
+        <p className="text-sm text-[var(--text-secondary)] max-w-md mb-8 leading-relaxed">
+          {error?.message || 'An error occurred while fetching your report. Please check your connection and try again.'}
         </p>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
             onClick={fetchReport}
-            className="inline-flex items-center gap-2 py-2 px-4 bg-[var(--brand-500)] hover:bg-[var(--brand-600)] text-[var(--on-brand)] text-sm font-semibold rounded-[9px] transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 py-2.5 px-5 bg-[var(--brand-500)] hover:bg-[var(--brand-600)] text-[var(--on-brand)] text-sm font-semibold rounded-[9px] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-500)]"
           >
-            <RotateCcw className="w-4 h-4" />
-            <span>Retry</span>
+            <RotateCcw className="w-4 h-4" aria-hidden="true" />
+            <span>Try Again</span>
           </button>
           <Link
             to="/"
-            className="inline-flex items-center gap-2 py-2 px-4 bg-[var(--bg-elevated)] hover:bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text)] text-sm font-medium rounded-[9px] transition-colors"
+            className="inline-flex items-center gap-2 py-2.5 px-5 bg-[var(--bg-elevated)] hover:bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text)] text-sm font-semibold rounded-[9px] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-500)]"
           >
-            <span>Return to Home</span>
+            <ArrowLeft className="w-4 h-4 text-[var(--text-secondary)]" aria-hidden="true" />
+            <span>Return to Scanner</span>
           </Link>
         </div>
       </div>
     );
   }
 
-  // Derive data points strictly as specified
-  const overallScore = Math.max(0, Math.min(100, Math.round(Number(data.overallScore) || 0)));
-  const overallScoreInfo = getScoreDetails(overallScore);
-  const tierLabel = data.statusLabel || overallScoreInfo.label;
-
-  const rawSectionScores = Array.isArray(data.sectionScores) ? data.sectionScores : [];
-
-  // Match SCORING_CATEGORIES with API sectionScores
-  const categoriesMap = new Map(SCORING_CATEGORIES.map((c) => [c.sectionName, c]));
-
-  const enrichedSections = SCORING_CATEGORIES.map((cat) => {
-    const apiSection = rawSectionScores.find((s) => s.sectionName === cat.sectionName);
-    const scoreVal = apiSection ? Number(apiSection.score) : 0;
-    const scoreDetails = getScoreDetails(apiSection?.status || scoreVal);
-    return {
-      sectionName: cat.sectionName,
-      name: cat.name,
-      weight: cat.weight,
-      description: cat.description,
-      score: scoreVal,
-      status: apiSection?.status || scoreDetails.tier,
-      feedback: apiSection?.feedback || '',
-      matchedKeywords: parseKeywords(apiSection?.matchedKeywords),
-      missingKeywords: parseKeywords(apiSection?.missingKeywords),
-      icon: DIMENSION_ICONS[cat.sectionName] || FileText,
-    };
-  });
-
-  // Skills validation section data
-  const skillsCategory = enrichedSections.find((s) => s.sectionName === 'SKILLS_VALIDATION');
-  const matchedKeywords = skillsCategory?.matchedKeywords || [];
-  const missingKeywords = skillsCategory?.missingKeywords || [];
-  const totalKeywords = matchedKeywords.length + missingKeywords.length;
-
-  // Risks list and counts
-  const risks = Array.isArray(data.risks) ? data.risks : [];
-  const highRisks = risks.filter((r) => String(r.severity).toUpperCase() === 'HIGH');
-  const mediumRisks = risks.filter((r) => String(r.severity).toUpperCase() === 'MEDIUM');
-  const lowRisks = risks.filter((r) => String(r.severity).toUpperCase() === 'LOW');
-  const highRiskCount = highRisks.length;
-  const mediumRiskCount = mediumRisks.length;
-  const lowRiskCount = lowRisks.length;
-  const totalRiskCount = risks.length;
-
-  const riskBadge = highRiskCount > 0
-    ? { text: 'Action needed', color: '#ef4444' }
-    : mediumRiskCount > 0
-    ? { text: 'Review', color: '#fbc904' }
-    : { text: 'Clear', color: '#00a46d' };
-
-  // Suggestions list
-  const suggestions = Array.isArray(data.suggestions) ? data.suggestions : [];
-
-  // Strengths and Improvements
-  // Strengths: Section categories with status STRONG or EXCELLENT
-  // Improvements: Section categories with status WEAK or POOR
-  const strengths = enrichedSections.filter((s) => {
-    const st = String(s.status).toUpperCase();
-    return st === 'STRONG' || st === 'EXCELLENT' || s.score >= 70;
-  });
-  const improvements = enrichedSections.filter((s) => {
-    const st = String(s.status).toUpperCase();
-    return st === 'WEAK' || st === 'POOR' || s.score < 55;
-  });
-
-  // Weakest scoring section for Quick Insights
-  const weakestSection = enrichedSections.reduce((worst, curr) =>
-    curr.score < worst.score ? curr : worst,
-    enrichedSections[0] || { name: 'ATS Compatibility', score: 0 }
-  );
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: 'easeOut' }}
-      className="w-full max-w-6xl xl:max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8"
-    >
-      {/* 8.10 Action Buttons Row */}
-      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--text-secondary)]">
-            Report ID:
-          </span>
-          <span className="text-[11px] font-mono px-2 py-0.5 rounded-[6px] bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-secondary)] truncate max-w-[200px] sm:max-w-xs">
-            {id}
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Download PDF report button */}
-          <button
-            type="button"
-            onClick={handleDownloadPdf}
-            disabled={isDownloading}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-[9px] bg-[var(--bg-elevated)] hover:bg-[var(--bg-page)] border border-[var(--border)] hover:border-[var(--border-strong)] text-[var(--text)] text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-400)]"
-          >
-            <Download className="w-4 h-4 text-[var(--brand-500)]" aria-hidden="true" />
-            <span>{isDownloading ? 'Downloading...' : 'Download PDF report'}</span>
-          </button>
-
-          {/* Generate fix prompt button */}
-          <button
-            type="button"
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-[9px] bg-[var(--brand-500)] hover:bg-[var(--brand-600)] text-[var(--on-brand)] text-xs font-semibold transition-colors shadow-[var(--shadow-primary-hover)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-400)]"
-          >
-            <Sparkles className="w-4 h-4" aria-hidden="true" />
-            <span>Generate fix prompt</span>
-          </button>
-
-          {/* Copy link button with helper text */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-[9px] bg-[var(--bg-elevated)] hover:bg-[var(--bg-page)] border border-[var(--border)] hover:border-[var(--border-strong)] text-[var(--text)] text-xs font-semibold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-400)]"
-            >
-              {copySuccess ? (
-                <>
-                  <Check className="w-4 h-4 text-[var(--success)]" aria-hidden="true" />
-                  <span>Copied</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4 text-[var(--text-secondary)]" aria-hidden="true" />
-                  <span>Copy link</span>
-                </>
-              )}
-            </button>
-            <span className="text-[11px] text-[var(--text-tertiary)] italic">
-              anyone with the link can view this report
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 8.1 Top Row */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
-        {/* ScoreGauge Card */}
-        <div className="md:col-span-5 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 flex flex-col items-center justify-center text-center">
-          <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--text-secondary)] mb-4">
-            Overall ATS Score
-          </span>
-          <ScoreGauge
-            score={overallScore}
-            tierLabel={tierLabel}
-            size={180}
-            showLabel={true}
-            scoreCapped={data.scoreCapped}
-            uncappedScore={data.uncappedScore}
-          />
-        </div>
-
-        {/* File Info Card */}
-        <div className="md:col-span-7 flex flex-col">
-          <InfoCard
-            fileName={data.fileName}
-            analyzedAt={data.analyzedAt}
-            targetRole={data.targetRole}
-            experienceYears={data.experienceYears}
-          />
-        </div>
-      </div>
-
-      {/* 8.2 Quick Insights Row (Four Cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Overall score tier label */}
-        <InsightCard
-          title="Overall Tier"
-          value={tierLabel}
-          subtext={`Score ${overallScore} out of 100`}
-          badgeText={overallScoreInfo.tier}
-          badgeColor={overallScoreInfo.color}
-          icon={CheckCircle2}
+    <>
+      <main className="max-w-7xl xl:max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-10 sm:space-y-12 lg:space-y-16">
+        {/* Section 0: Header */}
+        <ReportHeader
+          data={data}
+          reportId={id}
+          onImproveClick={() => setIsModalOpen(true)}
+          onDownloadPdf={handleDownloadPdf}
+          isDownloading={isDownloading}
+          onCopyLink={handleCopyLink}
+          copySuccess={copySuccess}
         />
 
-        {/* Card 2: Keywords matched vs total extracted */}
-        <InsightCard
-          title="Keywords Matched"
-          value={totalKeywords > 0 ? `${matchedKeywords.length} of ${totalKeywords}` : `${Math.round(data.keywordMatchPercent || 0)}%`}
-          subtext={
-            missingKeywords.length === 1
-              ? '1 missing keyword'
-              : `${missingKeywords.length} missing keywords`
-          }
-          badgeText={
-            totalKeywords > 0
-              ? `${Math.round((matchedKeywords.length / totalKeywords) * 100)}%`
-              : `${Math.round(data.keywordMatchPercent || 0)}%`
-          }
-          icon={Cpu}
-        />
+        {/* Sticky in-page navigation under the top bar */}
+        <ReportNav />
 
-        {/* Card 3: Compliance risks counts */}
-        <InsightCard
-          title="Compliance Risks"
-          value={totalRiskCount}
-          subtext={`${highRiskCount} high, ${mediumRiskCount} medium, ${lowRiskCount} low`}
-          badgeText={riskBadge.text}
-          badgeColor={riskBadge.color}
-          icon={AlertTriangle}
-        />
+        {/* Section 1: Overview */}
+        <OverviewSection data={data} />
 
-        {/* Card 4: Weakest scoring section */}
-        <InsightCard
-          title="Weakest Dimension"
-          value={weakestSection.name}
-          subtext={`Score: ${Math.round(weakestSection.score)} out of 100`}
-          badgeText={`${Math.round(weakestSection.score)}/100`}
-          badgeColor={getScoreDetails(weakestSection.score).color}
-          icon={TrendingUp}
-        />
-      </div>
+        {/* Section 2: Action plan */}
+        <ActionPlanSection data={data} />
 
-      {/* 8.3 Summary Card */}
-      <SummaryCard
-        overallScore={overallScore}
-        tierLabel={tierLabel}
-        sectionScores={enrichedSections}
-        highRiskCount={highRiskCount}
-        missingKeywordCount={missingKeywords.length}
-        scoreCapped={data.scoreCapped}
-      />
+        {/* Section 3: Job match */}
+        <JobMatchSection data={data} />
 
-      {/* 8.4 Strengths and Improvements */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Strengths Panel */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2.5 h-2.5 rounded-full bg-[var(--success)]" />
-            <h2 className="font-heading font-semibold text-sm text-[var(--text)] uppercase tracking-wider">
-              Strengths
-            </h2>
-          </div>
-          {strengths.length > 0 ? (
-            <div className="space-y-3">
-              {strengths.map((item) => {
-                const itemScoreInfo = getScoreDetails(item.score);
-                return (
-                  <div
-                    key={item.sectionName}
-                    className="flex items-center justify-between p-3 rounded-[9px] bg-[var(--bg-page)] border border-[var(--border)]"
-                  >
-                    <span className="text-xs font-medium text-[var(--text)]">
-                      {item.name}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-heading font-bold text-xs text-[var(--text)]">
-                        {Math.round(item.score)}/100
-                      </span>
-                      <span
-                        className="text-[10px] font-semibold px-2 py-0.5 rounded-[4px]"
-                        style={{
-                          backgroundColor: `${itemScoreInfo.color}1F`,
-                          color: itemScoreInfo.color,
-                          border: `1px solid ${itemScoreInfo.color}40`,
-                        }}
-                      >
-                        {itemScoreInfo.label}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-xs text-[var(--text-tertiary)]">
-              No sections met the strong or excellent threshold.
-            </p>
-          )}
-        </div>
+        {/* Section 4: Score breakdown */}
+        <ScoreBreakdownSection data={data} />
 
-        {/* Improvements Panel */}
-        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2.5 h-2.5 rounded-full bg-[var(--accent-orange)]" />
-            <h2 className="font-heading font-semibold text-sm text-[var(--text)] uppercase tracking-wider">
-              Improvements
-            </h2>
-          </div>
-          {improvements.length > 0 ? (
-            <div className="space-y-3">
-              {improvements.map((item) => {
-                const itemScoreInfo = getScoreDetails(item.score);
-                return (
-                  <div
-                    key={item.sectionName}
-                    className="flex items-center justify-between p-3 rounded-[9px] bg-[var(--bg-page)] border border-[var(--border)]"
-                  >
-                    <span className="text-xs font-medium text-[var(--text)]">
-                      {item.name}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-heading font-bold text-xs text-[var(--text)]">
-                        {Math.round(item.score)}/100
-                      </span>
-                      <span
-                        className="text-[10px] font-semibold px-2 py-0.5 rounded-[4px]"
-                        style={{
-                          backgroundColor: `${itemScoreInfo.color}1F`,
-                          color: itemScoreInfo.color,
-                          border: `1px solid ${itemScoreInfo.color}40`,
-                        }}
-                      >
-                        {itemScoreInfo.label}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-xs text-[var(--text-tertiary)]">
-              No critical improvements needed across evaluated sections.
-            </p>
-          )}
-        </div>
-      </div>
+        {/* Section 5: Things to fix */}
+        <ThingsToFixSection data={data} />
 
-      {/* 8.5 Six Section Bars */}
-      <div>
-        <div className="mb-4">
-          <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--text-secondary)]">
-            Dimension Breakdown
-          </span>
-          <h2 className="font-heading font-bold text-lg text-[var(--text)] mt-1">
-            Scoring dimension breakdown
-          </h2>
-        </div>
+        {/* Section 6: Details */}
+        <DetailsSection data={data} />
 
-        <div className="space-y-3">
-          {enrichedSections.map((sec) => (
-            <SectionScoreBar
-              key={sec.sectionName}
-              sectionName={sec.sectionName}
-              name={sec.name}
-              score={sec.score}
-              weight={sec.weight}
-              status={sec.status}
-              feedback={sec.feedback}
-            />
-          ))}
-        </div>
-      </div>
+        {/* Section 7: Next steps */}
+        <NextStepsSection onImproveClick={() => setIsModalOpen(true)} />
+      </main>
 
-      {/* 8.6 Six Detail Cards */}
-      <div>
-        <div className="mb-4">
-          <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--text-secondary)]">
-            Category Details
-          </span>
-          <h2 className="font-heading font-bold text-lg text-[var(--text)] mt-1">
-            Detailed dimension analysis
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {enrichedSections.map((sec) => (
-            <SectionDetailCard
-              key={sec.sectionName}
-              sectionName={sec.sectionName}
-              name={sec.name}
-              score={sec.score}
-              weight={sec.weight}
-              status={sec.status}
-              description={sec.description}
-              icon={sec.icon}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* 8.7 Risks and Keyword Analysis (Side-by-Side) */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-        {/* Risks Panel (Left) */}
-        <div className="md:col-span-6 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 space-y-4">
-          <div>
-            <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--text-secondary)]">
-              Compliance Deductions
-            </span>
-            <h2 className="font-heading font-bold text-base text-[var(--text)] mt-1">
-              Detected risks ({risks.length})
-            </h2>
-          </div>
-
-          {risks.length > 0 ? (
-            <div className="space-y-3">
-              {risks.map((risk, idx) => (
-                <RiskCard
-                  key={idx}
-                  title={risk.title}
-                  severity={risk.severity}
-                  description={risk.description}
-                  fix={risk.fix}
-                  defaultExpanded={idx === 0}
-                />
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-[var(--text-tertiary)] py-4">
-              No compliance risks detected.
-            </p>
-          )}
-        </div>
-
-        {/* Keyword Analysis Panel (Right) */}
-        <div className="md:col-span-6 bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 space-y-5">
-          <div>
-            <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--text-secondary)]">
-              Skills Alignment
-            </span>
-            <h2 className="font-heading font-bold text-base text-[var(--text)] mt-1">
-              Keyword analysis
-            </h2>
-          </div>
-
-          {/* Matched Keywords */}
-          <div>
-            <div className="flex items-center justify-between mb-2.5">
-              <span className="text-xs font-semibold text-[var(--success)] flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Matched skills ({matchedKeywords.length})</span>
-              </span>
-            </div>
-            {matchedKeywords.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {matchedKeywords.map((kw, i) => (
-                  <KeywordPill key={i} keyword={kw} variant="matched" />
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-[var(--text-tertiary)]">
-                No matched skills found.
-              </p>
-            )}
-          </div>
-
-          {/* Missing Keywords */}
-          <div className="pt-4 border-t border-[var(--border)]">
-            <div className="flex items-center justify-between mb-2.5">
-              <span className="text-xs font-semibold text-[var(--accent-orange)] flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5" />
-                <span>Missing skills ({missingKeywords.length})</span>
-              </span>
-            </div>
-            {missingKeywords.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {missingKeywords.map((kw, i) => (
-                  <KeywordPill key={i} keyword={kw} variant="missing" />
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-[var(--text-tertiary)]">
-                No missing skills detected.
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 8.8 Top Suggestions Row */}
-      {suggestions.length > 0 && (
-        <div>
-          <div className="mb-4">
-            <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--text-secondary)]">
-              Actionable Feedback
-            </span>
-            <h2 className="font-heading font-bold text-lg text-[var(--text)] mt-1">
-              Top improvement suggestions
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {suggestions.map((sug, idx) => (
-              <SuggestionCard
-                key={idx}
-                priority={sug.priority}
-                title={sug.title}
-                description={sug.description}
-                example={sug.example}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 8.9 Re-analyze Card */}
-      <CtaCard
-        text="Updated your resume? Scan it again."
-        buttonText="Re-analyze"
-        to="/"
-      />
-
-      {/* Fix Prompt Modal dialog */}
+      {/* Improvement Prompt Modal */}
       <FixPromptModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         analysisId={id}
       />
-    </motion.div>
+    </>
   );
 }

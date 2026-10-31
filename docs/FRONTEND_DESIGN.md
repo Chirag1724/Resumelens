@@ -231,78 +231,76 @@ Original copy specified below must be preserved verbatim.
 
 ## 8. Report Page (`/report/:id`)
 
-Rendered in the exact sequential order listed below:
+The report page presents a clear overview for non-technical candidates alongside deep inspectability for technical readers.
 
-### 8.1 Top Row
-- **ScoreGauge Card**: Displays the overall calculated score (0 to 100) and the corresponding score tier label. When scoreCapped is true, displays one line under the gauge: "Score limited because the job match is low. Without the limit: {uncappedScore}".
-- **File Info Card**: Displays `fileName`, scan date (`analyzedAt`), `targetRole`, and `experienceYears`. Any missing optional values are hidden cleanly.
+### 8.1 Layout and Spacing
+- Content container: maximum width 1360px (`max-w-7xl xl:max-w-[1360px]`), centered, with horizontal padding of 16px on mobile, 24px on tablet, and 32px on desktop.
+- Spacing scale: strictly based on an 8px grid scale. Vertical spacing between page sections is 64px on desktop, 48px on tablet, and 40px on mobile.
+- Cards: rendered using the card surface token (`var(--bg-card)`), 1px border (`var(--border)`), radius 12px (18px for the two large hero cards in Overview), padding 24px (20px on mobile), 16px between elements inside a card, and 24px grid gaps (16px on mobile).
+- Section header pattern: small label in sentence case (13px, brand color), an h2 heading (24px to 28px, Manrope 700), a one line subtitle (15px, secondary text, maximum line length 60ch), followed by 20px vertical spacing before section content.
+- Body text: 15px with line height 1.6 and a maximum line length of 68ch. Monospace font is reserved strictly for report UUID identifiers.
+- Heading hierarchy: single h1 on the page ("Your resume report"), h2 for each section, h3 inside cards, with `aria-labelledby` on every section pointing to its h2 heading.
+- Sticky navigation: in-page navigation bar sticky beneath the top bar with links for Overview, Action plan, Job match, Score breakdown, Things to fix, and Details. Active link is tracked and highlighted using `IntersectionObserver` with zero polling. Collapses into a horizontally scrollable chip row on mobile screens. Every section defines `scroll-margin-top` so headings remain visible when navigated to.
+- Top navigation bar: solid surface with at least 92 percent opacity and backdrop blur to prevent page content from bleeding through during scroll.
 
-### 8.2 Quick Insights Row
-Four cards populated strictly from backend API response data:
-1. Overall score tier label.
-2. Keywords matched versus total extracted, accompanied by missing keywords count. Percentage badge displayed in neutral color.
-3. Total compliance risks count, severity breakdown ("X high, Y medium, Z low"), and status badge ("Action needed" for HIGH, "Review" for MEDIUM, "Clear" when no HIGH or MEDIUM risks exist).
-4. Weakest scoring section name and its numerical score.
+### 8.2 Sequential Section Structure
 
-### 8.3 Summary Card
-Constructed strictly using this sentence template (no synthesized or fabricated copy):
-> `"Your resume scored {score} out of 100, rated {tier}. Strongest area: {name} ({score}). Weakest area: {name} ({score}). {n} high severity risks and {m} missing keywords were found."`
-- Proper pluralization applied: `"1 high severity risk"` vs `"{n} high severity risks"`, and `"1 missing keyword"` vs `"{m} missing keywords"`.
-- When `{n}` equals 0, the risk phrase is replaced with: `"No high severity risks were found."`.
-- When `scoreCapped` is true, appends the sentence: `"The overall score is limited because the job match is low."`.
+#### Section 0: Header
+- Heading: h1 with text "Your resume report".
+- Metadata chips: displays file name, target role, years of experience, and scan date. Empty or null fields are hidden cleanly without empty placeholders.
+- Identifier: monospace display of the report UUID with an inline copy action.
+- Actions: primary button "Improve my resume" (opens `FixPromptModal`), secondary button "Download PDF report", and secondary button "Copy link" with copy confirmation. Helper text beneath buttons: "Anyone with the link can view this report."
 
-### 8.4 Strengths and Improvements
-Derived directly from the six section scores:
-- **Strengths**: Section categories with status `STRONG` or `EXCELLENT`, listed with section name and score.
-- **Improvements**: Section categories with status `WEAK` or `POOR`, listed with section name and score.
+#### Section 1: Overview (`id="overview"`)
+- Hero row: two-column layout on desktop (5 and 7 columns out of 12), stacked on mobile.
+- Left hero card (radius 18px): `ScoreGauge` showing overall score out of 100 and qualitative tier label with icon. Segmented scale bar showing all five tiers (Poor, Weak, Moderate, Strong, Excellent) with tier ranges from `TIER_RANGES` and a position marker at the candidate score. When `scoreCapped` is true, displays a highlighted notice derived from `capInfo`: "Your score is held at {cap}. Your resume on its own would score {uncapped}." and "Raise your skills match from {skillsNow} to {threshold} to lift this limit. That is about {moreSkills} more of the job's skills." (omitted if `moreSkills` is null).
+- Right hero card (radius 18px): candidate verdict headline and body copy from `verdictFor(overallScore)`. "Start here" section featuring the first three action plan items as a numbered list with item titles and effort chips, accompanied by a "See all steps" link pointing to `#plan`.
+- Summary fact cards: row of four metric cards beneath the hero cards derived from `summaryFacts` (Skills covered, Things to fix, Strongest area, Needs most work), each featuring an icon, primary value or name, and a short explanatory sentence.
 
-### 8.5 Six Section Bars
-Horizontal progress bars for all six scoring dimensions showing category title, score out of 100, weight percentage, status pill, and concise rule feedback.
+#### Section 2: Action Plan (`id="plan"`)
+- Subtitle: "Do these in order. The first ones help the most."
+- Numbered cards for each recommended action item derived from `buildActionPlan` showing title, why it matters, how to do it, importance chip, effort chip, and score gain estimate chip when applicable.
+- Disclosures: "Show example" toggle revealing Before and After comparative rows when concrete examples exist. "From your resume" quotation block when contextual excerpts are available.
+- State: "Mark as done" interactive checkbox stored in React component state only (no browser storage). Completed items remain visible in a calmer, dimmed presentation with a green completion check.
+- Empty state: "No action needed. Your resume matches this job well." when no action items exist.
 
-### 8.6 Six Detail Cards
-Six individual cards (one for each dimension) featuring:
-- Standard line icon in a 40px rounded container.
-- Numerical score out of 100.
-- Tier label badge.
-- Thin progress bar.
-- One short fixed sentence explaining what the category measures:
-  - **ATS Compatibility**: `"Measures standard section headings, contact information, file parsing readiness, and keyword density."`
-  - **Skills Validation**: `"Measures alignment between job description keywords and candidate skills using exact and fuzzy matching."`
-  - **Impact & Achievements**: `"Measures the proportion of bullet points containing measurable metrics and action verbs."`
-  - **Project Quality**: `"Measures project structure including project title, technical stack mentions, descriptions, and tangible outcomes."`
-  - **Writing Quality**: `"Measures conciseness, active voice usage, vocabulary repetition, and avoidance of filler phrasing."`
-  - **Professionalism**: `"Measures formatting consistency, bullet uniformity, date styling, spelling accuracy, and document length."`
+#### Section 3: Job Match (`id="job-match"`)
+- Metric summary: sentence stating "You cover {matched} of {total} skills this job asks for ({percent}%)".
+- Visual bar: two-part segmented bar displaying matched and missing proportions with accessible progressbar semantics.
+- Coverage band: descriptive sentence based on `keywordBand` ("Great coverage.", "Decent coverage. Add the missing skills you have.", or "Low coverage. Many of the job's skills are missing.").
+- Skill pill groups: "Skills you already show" with check icons and "Skills the job asks for that we did not find" with plus icons. Empty groups are hidden; a positive confirmation message is displayed when zero skills are missing.
+- Best practice guidance: callout titled "How to add a skill the right way" with three rules: add only genuine skills, use exact job wording, and integrate skills into project or experience bullets rather than isolated lists.
 
-### 8.7 Risks and Keyword Analysis (Side-by-Side)
-- **Risks Panel (Left)**: Expandable list of detected compliance deductions. Each item shows a severity badge (`HIGH`, `MEDIUM`, `LOW`), risk title, factual description, and the actionable fix recommendation.
-- **Keyword Analysis Panel (Right)**: Categorized keyword pills for matched skills (green-tinted) and missing skills (orange-tinted). No individual keyword percentages are displayed.
+#### Section 4: Score Breakdown (`id="breakdown"`)
+- Six category cards in canonical order: ATS compatibility, Skills match, Impact and results, Project quality, Writing quality, Professionalism. Arranged in two columns on tablet and desktop, single column on mobile.
+- Card contents: category label, weight percentage chip, score out of 100 with progress bar and tier label, points earned ("Points earned: X of {weight}"), category definition sentence, qualitative meaning line (good, partial, or needs), and a "How to improve" list of tips when score is below 85, or "Nothing to fix here." when 85 or above.
 
-### 8.8 Top Suggestions Row
-Horizontal row of recommendation cards. Each card displays:
-- Priority badge (`HIGH`, `MEDIUM`, `LOW`).
-- Suggestion title.
-- Clear description.
-- Concrete fix example.
+#### Section 5: Things to Fix (`id="issues"`)
+- Subtitle: "These are the same items as the action plan, with more detail."
+- Grouped by severity: Important (HIGH), Worth fixing (MEDIUM), and Small polish (LOW). Empty severity tiers are hidden.
+- Accordion items: real button triggers with `aria-expanded` showing friendly title, importance chip, and effort chip. High importance items start expanded by default.
+- Panel detail: What we found (with raw repeated word listings appended for repeated words risks), Why it matters, How to fix it, and Before/After examples where available.
+- Empty state: "We found no layout, writing or formatting problems." when zero risks are detected.
 
-### 8.9 Re-analyze Card
-Bottom card containing:
-- Text: `"Updated your resume? Scan it again."`
-- Button: `"Re-analyze"` linking back to the landing page (`/`).
+#### Section 6: Details (`id="details"`)
+- Accordion 1 ("How this score is calculated"): breakdown table showing all six dimensions with weights, scores, and points earned, the formula line "Overall score = sum of points earned", tier threshold ranges from `TIER_RANGES`, and when relevant the skill threshold capping rule in plain words ("If the skills match is below 40, the overall score is limited to 54. From 40 to 59 it is limited to 69.").
+- Accordion 2 ("What this report cannot tell you"): legal disclaimer text alongside explicit limitations noting keyword/wording comparison, English language optimization, and absence of factual verification.
+- Accordion 3 ("Terms used"): concise explanations of core terminology from `GLOSSARY` (ATS, keyword, tier).
 
-### 8.10 Action Buttons
-- **Download PDF report**: Initiates download from `GET /api/v1/analysis/{id}/report`.
-- **Generate fix prompt**: Opens the modal dialog to view and copy the AI improvement prompt.
-- **Copy link**: Copies current report URL with helper text: `"anyone with the link can view this report"`.
+#### Section 7: Next Steps
+- Two-card layout:
+  1. "Improve your wording": three numbered steps ("Generate the improvement prompt", "Paste it into an AI assistant", "Open the result in a LaTeX editor such as Overleaf") and an action button opening `FixPromptModal`.
+  2. "Updated your resume?": description and Re-analyze button navigating back to the scanner.
+- Page footer: fixed disclaimer statement from `DISCLAIMER`.
 
-### 8.11 Explicitly Excluded Components
-Because the backend API provides no underlying data for them, the following items are deliberately omitted:
-- Resume preview iframe or canvas.
-- Written AI text summaries or unstructured prose.
-- Letter grades (A, B, C, D, F).
-- Parse rate metrics.
-- Recruiter match metrics.
-- Sparkline micro-charts.
-- Individual per-keyword percentage match numbers.
+### 8.3 State and Accessibility Rules
+- Interactive states: hover, focus-visible (2px ring), active, and disabled states implemented across all buttons, inputs, links, and accordions.
+- Multi-channel signaling: color is never the sole indicator; every score, tier, and severity is paired with an explicit text label and an icon.
+- Contrast compliance: text on every surface maintains at least a 4.5 to 1 contrast ratio.
+- Responsive flow: zero horizontal scrolling at 360px viewport width.
+- Motion: respects `prefers-reduced-motion` settings.
+- Null-safety: optional backend fields (`targetRole`, `experienceYears`, `risks`, `suggestions`, keyword arrays) gracefully handle null or empty states without layout shift or script exceptions.
+- Exclusion: `improvementPrompt` from the API response is never rendered directly in the report view. Data is never fabricated.
 
 ---
 
@@ -339,3 +337,15 @@ Every interactive element (buttons, links, inputs, cards) must have explicitly s
 - Color is never the single carrier of information: every score tier or status includes a visible text label alongside color.
 - All form controls and inputs have associated semantic `<label>` elements or accessible `aria-label` tags.
 - Tested and verified across viewports from **360px** mobile widths up to **1440px** desktop widths.
+
+---
+
+## 11. Content Layer and Report Copy
+
+The content layer provides clear text and guidance for your report.
+All copy uses plain English in the second person.
+Sentences stay under 20 words.
+Instructions start with a verb.
+Copy avoids scary words and promises.
+The file `src/content/reportCopy.js` exports verdicts, categories, risk guidance, effort labels, and a glossary.
+The model layer in `src/lib/reportModel.js` formats your action plan and score insights.

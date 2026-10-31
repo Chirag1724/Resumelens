@@ -1,5 +1,14 @@
 import { useId } from 'react';
+import { Sparkles, CheckCircle2, Info, AlertTriangle, AlertCircle } from 'lucide-react';
 import { getScoreDetails } from '../lib/score';
+
+const TIER_ICONS = {
+  EXCELLENT: Sparkles,
+  STRONG: CheckCircle2,
+  MODERATE: Info,
+  WEAK: AlertTriangle,
+  POOR: AlertCircle,
+};
 
 /**
  * ScoreGauge component
@@ -28,6 +37,7 @@ export default function ScoreGauge({
   const numScore = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
   const scoreInfo = getScoreDetails(numScore);
   const displayLabel = tierLabel || scoreInfo.label;
+  const TierIcon = TIER_ICONS[scoreInfo.tier] || CheckCircle2;
 
   const strokeWidth = 11;
   const radius = (size - strokeWidth * 2) / 2;
@@ -104,14 +114,15 @@ export default function ScoreGauge({
       {/* Tier label badge */}
       {showLabel && (
         <div
-          className="mt-3 px-3 py-1 rounded-[6px] text-xs font-semibold tracking-wide"
+          className="mt-3 px-3 py-1 rounded-[6px] text-xs font-semibold tracking-wide inline-flex items-center gap-1.5"
           style={{
             backgroundColor: `${scoreInfo.color}1F`,
             color: scoreInfo.color,
             border: `1px solid ${scoreInfo.color}40`,
           }}
         >
-          {displayLabel}
+          {TierIcon && <TierIcon className="w-3.5 h-3.5" aria-hidden="true" />}
+          <span>{displayLabel}</span>
         </div>
       )}
 

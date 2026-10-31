@@ -20,9 +20,9 @@
 
 ## What It Does
 
-ResumeLens accepts a resume (PDF or plain text) and a job description, then produces an instant, transparent compatibility score broken down across six categories: ATS formatting compliance, skills match, impact and achievements, project quality, writing quality, and professionalism.
+ResumeLens accepts a resume (PDF or DOCX) and a job description, then produces an instant, transparent compatibility score broken down across six categories: ATS formatting compliance, skills match, impact and achievements, project quality, writing quality, and professionalism.
 
-The score reflects how well a resume performs against automated screening systems for that specific role. Alongside the score, the system identifies missing high-value keywords and generates copyable fix prompts for targeted resume improvement. Zero raw documents are permanently retained on disk.
+The score reflects how well a resume performs against automated screening systems for that specific role. Alongside the score, the system identifies missing high-value keywords and generates copyable fix prompts for targeted resume improvement. The original file is not kept on disk; extracted text is stored so report links work, and guest data is deleted after the retention period.
 
 ---
 
@@ -89,7 +89,12 @@ The fastest way to run the entire ResumeLens stack locally is with Docker Compos
 # 1. Clone the repository
 git clone https://github.com/Chirag1724/Resumelens.git
 
-# 2. Launch PostgreSQL, Backend, and Frontend containers
+# 2. Copy the environment configuration template
+cp .env.example .env
+
+# Configure POSTGRES_PASSWORD, JWT_SECRET (at least 32 characters), and CORS_ALLOWED_ORIGINS in .env
+
+# 3. Launch PostgreSQL, Backend, and Frontend containers
 docker compose up -d --build
 ```
 
@@ -126,6 +131,7 @@ docker compose down
    DB_USERNAME=postgres
    DB_PASSWORD=your_password
    JWT_SECRET=your_32_character_minimum_random_secret_string
+   RETENTION_DAYS=7
    ```
 3. Run the Spring Boot application:
    ```bash
@@ -202,6 +208,6 @@ ResumeLens was created and is actively maintained by:
 ## License & Governance
 
 - **License:** Distributed under the [MIT License](LICENSE).
-- **Privacy Policy:** Transparent, ephemeral data handling details in [PRIVACY.md](PRIVACY.md).
+- **Privacy Policy:** Original files are not kept; extracted text is stored for report links, and guest data is deleted after the retention period. See [PRIVACY.md](PRIVACY.md).
 - **Terms of Service:** Educational usage and disclaimer in [TERMS.md](TERMS.md).
 - **Security Policy:** Coordinated vulnerability disclosure in [SECURITY.md](SECURITY.md).

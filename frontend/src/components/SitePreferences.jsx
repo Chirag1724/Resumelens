@@ -68,8 +68,8 @@ export default function SitePreferences() {
                 <Cookie className="w-5 h-5" />
               </div>
               <div className="text-xs sm:text-sm text-[var(--text-secondary)] font-body leading-relaxed">
-                <span className="font-heading font-semibold text-[var(--text)]">We use cookies.</span>{' '}
-                We use cookies and essential local storage to keep your session authenticated, optimize system performance, and ensure all resume evaluations remain ephemeral and private. Learn more in our{' '}
+                <span className="font-heading font-semibold text-[var(--text)]">Privacy and storage.</span>{' '}
+                We use localStorage only to save your cookie consent choice. The login token is kept in memory. The original file is not kept, only extracted text is stored so report links work. Guest data is deleted after the retention period. Learn more in our{' '}
                 <Link
                   to="/privacy"
                   className="text-[var(--brand-500)] hover:text-[var(--brand-400)] hover:underline font-semibold inline-flex items-center gap-0.5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--brand-400)] rounded"

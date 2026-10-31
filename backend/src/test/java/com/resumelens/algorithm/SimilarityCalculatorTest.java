@@ -31,7 +31,7 @@ class SimilarityCalculatorTest {
 
     @Test
     void levenshteinTypicalSkillVariant() {
-        // "javascript" vs "Javascript" — after lowercasing, distance = 0
+        // "javascript" vs "Javascript" - after lowercasing, distance = 0
         assertEquals(0, calc.levenshteinDistance("javascript", "javascript"));
     }
 
@@ -124,5 +124,33 @@ class SimilarityCalculatorTest {
 
         assertTrue(calc.isKeywordMatched("machine learning", "Specialized in ML"));
         assertTrue(calc.isKeywordMatched("ml", "Specialized in Machine Learning"));
+    }
+
+    @Test
+    void testA_hyphenatedVersionSuffixedAndAliasMatching() {
+        // (a) jwt matches "JWT-based authentication", react matches "React-based UI",
+        // rest matches "RESTful APIs", html and css match "HTML5 and CSS3"
+        assertTrue(calc.isKeywordMatched("jwt", "JWT-based authentication"));
+        assertTrue(calc.isKeywordMatched("react", "React-based UI"));
+        assertTrue(calc.isKeywordMatched("rest", "RESTful APIs"));
+        assertTrue(calc.isKeywordMatched("html", "HTML5 and CSS3"));
+        assertTrue(calc.isKeywordMatched("css", "HTML5 and CSS3"));
+    }
+
+    @Test
+    void testB_negativeAndBoundaryMatchingCases() {
+        // (b) these must stay false: learning in "leading a team", data in "database layer",
+        // r in "react and redux", go in "good problem solving", java in "javascript developer",
+        // c in "C++ and Python", models in "modern web apps",
+        // s3 in "S3 bucket" must be true while s in "S3 bucket" must be false
+        assertFalse(calc.isKeywordMatched("learning", "leading a team"));
+        assertFalse(calc.isKeywordMatched("data", "database layer"));
+        assertFalse(calc.isKeywordMatched("r", "react and redux"));
+        assertFalse(calc.isKeywordMatched("go", "good problem solving"));
+        assertFalse(calc.isKeywordMatched("java", "javascript developer"));
+        assertFalse(calc.isKeywordMatched("c", "C++ and Python"));
+        assertFalse(calc.isKeywordMatched("models", "modern web apps"));
+        assertTrue(calc.isKeywordMatched("s3", "S3 bucket"));
+        assertFalse(calc.isKeywordMatched("s", "S3 bucket"));
     }
 }

@@ -2,13 +2,14 @@ package com.resumelens.algorithm;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for TfIdfCalculator.
- * No Spring context needed — pure algorithm tests.
+ * No Spring context needed - pure algorithm tests.
  */
 class TfIdfCalculatorTest {
 
@@ -16,16 +17,16 @@ class TfIdfCalculatorTest {
 
     /**
      * Verifies the core IDF-discriminativeness property of topKeywords:
-     * "alpha" appears once in every line → high TF, low IDF (ubiquitous across corpus).
-     * "beta"  appears 3 times but only in one line → moderate TF, high IDF (distinctive).
+     * "alpha" appears once in every line -> high TF, low IDF (ubiquitous across corpus).
+     * "beta"  appears 3 times but only in one line -> moderate TF, high IDF (distinctive).
      *
      * With sentence-level IDF corpus (N = 5 lines):
      *   IDF("alpha") = log(6/6) + 1 = 1.0   (in all 5 lines)
      *   IDF("beta")  = log(6/2) + 1 ≈ 2.10  (in 1 line)
      *
      * TF over full text (25 tokens):
-     *   TF("alpha") = 5/25 = 0.20  → TF-IDF ≈ 0.20
-     *   TF("beta")  = 3/25 = 0.12  → TF-IDF ≈ 0.25
+     *   TF("alpha") = 5/25 = 0.20  -> TF-IDF ≈ 0.20
+     *   TF("beta")  = 3/25 = 0.12  -> TF-IDF ≈ 0.25
      *
      * Expected: "beta" ranks above "alpha".
      */
@@ -104,8 +105,8 @@ class TfIdfCalculatorTest {
      * Verifies that a single-paragraph input (no newlines) is still split into
      * multiple IDF documents via semicolons, so IDF discrimination is preserved.
      *
-     * "alpha" appears in every semicolon-delimited clause → low IDF.
-     * "beta"  appears 3 times but only in the first clause → high IDF.
+     * "alpha" appears in every semicolon-delimited clause -> low IDF.
+     * "beta"  appears 3 times but only in the first clause -> high IDF.
      *
      * Without semicolon splitting the whole paragraph is one document and every
      * term gets the same IDF = 1.0, collapsing ranking to TF-only (alpha wins).
@@ -161,5 +162,71 @@ class TfIdfCalculatorTest {
 
         assertFalse(keywords.contains("apache"), "component word 'apache' must not be added as a separate keyword");
         assertFalse(keywords.contains("science"), "component word 'science' must not be added as a separate keyword");
+    }
+
+    @Test
+    void testC_keywordFillExcludesCommonEnglishWordsAndRetainsTechSkills() {
+        String jd = String.join("\n",
+            "Build user interfaces with ReactJS and NextJS",
+            "Develop backend services using Node JS and Express JS",
+            "Store data in Mongo DB",
+            "Write clean code in Typescript",
+            "Style applications with Tailwind and use Github Actions for deployment"
+        );
+
+        List<String> keywords = calc.topKeywords(jd, 30);
+
+        List<String> expectedSkills = List.of(
+            "reactjs", "nextjs", "node js", "express", "mongo db", "typescript", "tailwind", "github actions"
+        );
+        for (String skill : expectedSkills) {
+            assertTrue(keywords.contains(skill), "Keywords must contain: " + skill);
+        }
+
+        List<String> forbidden = List.of(
+            "use", "user", "store", "clean", "style", "services", "interfaces", "backend"
+        );
+        for (String word : forbidden) {
+            assertFalse(keywords.contains(word), "Keywords must not contain common word: " + word);
+        }
+    }
+
+    @Test
+    void testD_missingKeywordsListIsEmptyForMatchingResume() {
+        String jd = String.join("\n",
+            "Build user interfaces with ReactJS and NextJS",
+            "Develop backend services using Node JS and Express JS",
+            "Store data in Mongo DB",
+            "Write clean code in Typescript",
+            "Style applications with Tailwind and use Github Actions for deployment"
+        );
+        String resume = "React.js, Next.js, Node.js, Express.js, MongoDB, TypeScript, Tailwind CSS and GitHub Actions";
+
+        SimilarityCalculator sim = new SimilarityCalculator();
+        List<String> keywords = calc.topKeywords(jd, 30);
+
+        List<String> missing = new ArrayList<>();
+        for (String kw : keywords) {
+            if (!sim.isKeywordMatched(kw, resume)) {
+                missing.add(kw);
+            }
+        }
+        assertTrue(missing.isEmpty(), "Missing list must be empty, but contained: " + missing);
+    }
+
+    @Test
+    void testE_fullStackJobDescriptionHasNoneOfThroughStackSprint() {
+        String jd = "Looking for a developer with experience working through full stack development across sprint cycles.";
+        List<String> keywords = calc.topKeywords(jd, 30);
+
+        assertFalse(keywords.contains("through"), "Keywords must not contain 'through'");
+        assertFalse(keywords.contains("stack"), "Keywords must not contain 'stack'");
+        assertFalse(keywords.contains("sprint"), "Keywords must not contain 'sprint'");
+    }
+
+    @Test
+    void testCommonEnglishWordsSetSize() {
+        assertTrue(TfIdfCalculator.COMMON_ENGLISH_WORDS.size() >= 300,
+            "Common English words set must have at least 300 words");
     }
 }

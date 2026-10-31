@@ -94,4 +94,5 @@ public class MatchResult {
     public Double getKeywordMatchPercent() { return keywordMatchPercent; }
     public String getImprovementPrompt() { return improvementPrompt; }
     public LocalDateTime getAnalyzedAt() { return analyzedAt; }
+    public void setAnalyzedAt(LocalDateTime analyzedAt) { this.analyzedAt = analyzedAt; }
 }

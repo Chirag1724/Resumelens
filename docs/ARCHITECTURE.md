@@ -60,7 +60,9 @@ frontend/
     ├── api/
     │   └── client.js                # Axios client with interceptors, auth token handling, and endpoints
     ├── components/
+    │   ├── ActionPlanSection.jsx    # Action plan section with ordered improvement cards and checkboxes
     │   ├── CtaCard.jsx              # Re-analyze call-to-action card linking back to home
+    │   ├── DetailsSection.jsx       # Score calculation, limitations, and glossary accordions
     │   ├── DocumentMockup.jsx       # CSS-rendered resume document mockup with scanline animation
     │   ├── DropZone.jsx             # File upload zone with drag-and-drop, validation, and intake form
     │   ├── ErrorBoundary.jsx        # Component error boundary with recovery UI
@@ -69,20 +71,32 @@ frontend/
     │   ├── HistoryCard.jsx          # Past evaluation card linking to /report/:id
     │   ├── InfoCard.jsx             # Resume metadata panel showing file name, date, role, experience
     │   ├── InsightCard.jsx          # Quick metric card for scores, risks, keywords, and dimensions
+    │   ├── JobMatchSection.jsx      # Skills match section with ratio bar, pill groups, and guidance box
     │   ├── KeywordPill.jsx          # Matched and missing keyword pills
+    │   ├── NextStepsSection.jsx     # Prompt workflow cards and re-analyze call-to-action with disclaimer
+    │   ├── OverviewSection.jsx      # Top hero section with score gauge, scale bar, verdict, and facts
     │   ├── PageBackground.jsx       # Three-layer background with dot grid, radial glow, and hairlines
     │   ├── PdfIcon.jsx              # Inline SVG document icon with folded corner
+    │   ├── ReportHeader.jsx         # Report header with title, metadata chips, copy actions, and PDF trigger
+    │   ├── ReportNav.jsx            # Sticky in-page navigation tracked with IntersectionObserver
+    │   ├── ReportSkeleton.jsx       # Loading skeleton matching redesigned report page layout
     │   ├── RiskCard.jsx             # Expandable compliance deduction card with severity badge and fix
-    │   ├── ScoreGauge.jsx           # Circular SVG gauge with animated score fill and tier label
+    │   ├── ScoreBreakdownSection.jsx# Six category cards with progress bars, points earned, and improve tips
+    │   ├── ScoreGauge.jsx           # Circular SVG gauge with animated score fill, tier label, and icon
     │   ├── SectionDetailCard.jsx    # Dimension detail card with category score and explanation
     │   ├── SectionScoreBar.jsx      # Horizontal dimension score bar with weight and feedback
     │   ├── StepCard.jsx             # Numbered step card for How It Works section
     │   ├── SuggestionCard.jsx       # Actionable improvement card with priority badge and example
     │   ├── SummaryCard.jsx          # Deterministic analysis summary sentence card
+    │   ├── ThingsToFixSection.jsx   # Grouped accordion issue cards by severity with before and after examples
     │   └── WeightsStrip.jsx         # Dimension weight pills matching SCORING_RULES.md
+    ├── content/
+    │   └── reportCopy.js            # User-facing report copy, category definitions, and risk guidance
     ├── context/
     │   └── AuthContext.jsx          # In-memory authentication state and session management
     ├── lib/
+    │   ├── reportModel.js           # Pure logic functions for tiers, caps, points, and action plans
+    │   ├── reportModel.test.js      # Unit tests for report logic functions
     │   ├── score.js                 # Canonical score tier boundaries (85, 70, 55, 40) and tokens
     │   └── scoring.js               # Dimension definitions, weights, and descriptions
     └── pages/
@@ -133,7 +147,8 @@ backend/
     │       ├── AuthResponse.java
     │       ├── HistoryItemResponse.java
     │       ├── SectionScoreResponse.java
-    │       └── SuggestionResponse.java
+    │       ├── RiskResponse.java            # Identified scoring risk with code, points deduction, and section
+    │       └── SuggestionResponse.java      # Prioritized recommendation with code (KEYWORDS, WEAK_VERBS, QUANTIFY, STRUCTURE)
     │
     ├── entity/                             # JPA entities (never exposed via API)
     │   ├── JobDescription.java
@@ -167,6 +182,7 @@ backend/
         ├── HistoryService.java
         ├── PromptBuilderService.java
         ├── ReportGeneratorService.java
+        ├── RetentionService.java
         ├── ResumeParserService.java
         ├── ResumeService.java
         ├── SuggestionEngine.java
@@ -290,9 +306,16 @@ All endpoints are prefixed: `/api/v1`
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `GET` | `/api/v1/history` | Authenticated | List all past analysis results for the logged-in user, ordered by date descending. |
+| `DELETE` | `/api/v1/history/{id}` | Authenticated | Deletes a match result and section scores (and orphaned resume) owned by the caller. |
 
 ### Health (`/api/v1/health`)
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `GET` | `/api/v1/health` | Public (Guest) | Returns `{ "status": "UP" }` for health/liveness probes. |
 
+---
+
+## Data Handling & Retention
+- **Document Ingestion:** Original PDF and DOCX files are parsed in memory and discarded. Only extracted text is persisted in PostgreSQL to enable capability URL report retrieval (`/report/:id`).
+- **Guest Retention Cleanup:** A daily scheduled job (`RetentionService`) deletes guest resumes (where user is null), their match results, and section scores older than `RETENTION_DAYS` (default 7 days).
+- **Owner Deletion:** Authenticated users can delete individual evaluations and their associated data via `DELETE /api/v1/history/{id}`.
