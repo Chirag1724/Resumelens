@@ -153,4 +153,18 @@ class SimilarityCalculatorTest {
         assertTrue(calc.isKeywordMatched("s3", "S3 bucket"));
         assertFalse(calc.isKeywordMatched("s", "S3 bucket"));
     }
+
+    @Test
+    void testRestApiKeywordMatching() {
+        String keyword = "rest api";
+        // Resume with "RESTful APIs" matches
+        assertTrue(calc.isKeywordMatched(keyword, "Built backend microservices using RESTful APIs and Docker."));
+        // Resume with "REST API" matches
+        assertTrue(calc.isKeywordMatched(keyword, "Engineered high-throughput REST API endpoints in Java."));
+        // Resume without any of these does not match
+        assertFalse(calc.isKeywordMatched(keyword, "Software engineer skilled in PostgreSQL and Docker."));
+        // Resume with lone words rest or apis does not match
+        assertFalse(calc.isKeywordMatched(keyword, "Took a well-deserved rest after project completion."));
+        assertFalse(calc.isKeywordMatched(keyword, "Integrated third-party SDK and GraphQL endpoints."));
+    }
 }

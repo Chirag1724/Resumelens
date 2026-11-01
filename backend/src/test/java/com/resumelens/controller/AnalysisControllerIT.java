@@ -17,6 +17,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
+import com.resumelens.entity.JobDescription;
+import com.resumelens.repository.JobDescriptionRepository;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -39,6 +41,8 @@ class AnalysisControllerIT {
     MockMvc mockMvc;
     @Autowired
     ObjectMapper mapper;
+    @Autowired
+    JobDescriptionRepository jobDescriptionRepository;
 
     /** Shared across every test method via @BeforeEach. */
     private UUID resumeId;
@@ -525,6 +529,47 @@ class AnalysisControllerIT {
                 "GET overallScore must equal POST overallScore for capped result");
         assertEquals(54.0, cappedPostData.path("overallScore").asDouble(), 0.01,
                 "Capped overallScore must equal 54.0 literal");
+    }
+
+    @Test
+    void should_returnSameSkills50AndScoreCappedFalse_forBlankJdInPostAndGet() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "strong-blank-jd.pdf", "application/pdf", buildStrongResumePdf());
+        String uploadBody = mockMvc.perform(multipart("/api/v1/resumes/upload").file(file))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        UUID uploadResumeId = UUID.fromString(mapper.readTree(uploadBody).path("data").path("resumeId").asText());
+
+        var jd = jobDescriptionRepository.save(new JobDescription("Blank JD", "", ""));
+        String postBody = mockMvc.perform(post("/api/v1/analysis/match")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(String.format("{\"resumeId\":\"%s\",\"jobDescriptionId\":%d,\"jobTitle\":\"Engineer\"}",
+                        uploadResumeId, jd.getId())))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode postData = mapper.readTree(postBody).path("data");
+        UUID matchId = UUID.fromString(postData.path("id").asText());
+
+        String getBody = mockMvc.perform(get("/api/v1/analysis/{id}", matchId))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode getData = mapper.readTree(getBody).path("data");
+
+        assertEquals(50.0, postData.path("skillsScore").asDouble(), 0.01);
+        assertEquals(50.0, getData.path("skillsScore").asDouble(), 0.01);
+        assertFalse(postData.path("scoreCapped").asBoolean());
+        assertFalse(getData.path("scoreCapped").asBoolean());
+        assertEquals(postData.path("uncappedScore").asDouble(), getData.path("uncappedScore").asDouble(), 1e-9);
+        assertEquals(postData.path("overallScore").asDouble(), getData.path("overallScore").asDouble(), 1e-9);
+
+        for (JsonNode risk : postData.path("risks")) {
+            assertFalse(risk.path("code").asText().contains("KEYWORD_DENSITY"));
+        }
+        for (JsonNode risk : getData.path("risks")) {
+            assertFalse(risk.path("code").asText().contains("KEYWORD_DENSITY"));
+        }
     }
 
     static byte[] buildStrongResumePdf() throws Exception {

@@ -7,16 +7,13 @@ export default function NextStepsSection({ onImproveClick }) {
     <section id="next-steps" aria-labelledby="next-steps-heading" className="space-y-8 scroll-mt-36">
       {/* Section Header */}
       <div className="mb-5 space-y-1.5">
-        <span className="text-[13px] font-semibold text-[var(--brand-500)] tracking-wide">
-          Next steps
-        </span>
         <h2
           id="next-steps-heading"
-          className="text-2xl sm:text-[28px] font-heading font-bold text-[var(--text)] leading-tight"
+          className="text-2xl sm:text-[28px] font-heading font-bold text-[var(--text)] leading-tight [text-wrap:balance]"
         >
           Take action on your report
         </h2>
-        <p className="text-[15px] text-[var(--text-secondary)] leading-[1.6] max-w-[60ch]">
+        <p className="text-[15px] text-[var(--text-secondary)] leading-[1.6] max-w-[60ch] [text-wrap:balance]">
           Apply suggestions with our prompt assistant or scan a refreshed resume.
         </p>
       </div>
@@ -46,7 +43,7 @@ export default function NextStepsSection({ onImproveClick }) {
                 <span className="w-5 h-5 rounded-full bg-[var(--brand-500)]/15 text-[var(--brand-500)] font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
                   3
                 </span>
-                <span>Open the result in a LaTeX editor such as Overleaf</span>
+                <span>Open the result in a LaTeX editor</span>
               </li>
             </ol>
           </div>

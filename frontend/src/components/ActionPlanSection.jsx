@@ -65,16 +65,13 @@ export default function ActionPlanSection({ data }) {
     <section id="plan" aria-labelledby="plan-heading" className="scroll-mt-36">
       {/* Section Header */}
       <div className="mb-5 space-y-1.5">
-        <span className="text-[13px] font-semibold text-[var(--brand-500)] tracking-wide">
-          Action plan
-        </span>
         <h2
           id="plan-heading"
-          className="text-2xl sm:text-[28px] font-heading font-bold text-[var(--text)] leading-tight"
+          className="text-2xl sm:text-[28px] font-heading font-bold text-[var(--text)] leading-tight [text-wrap:balance]"
         >
           Action plan
         </h2>
-        <p className="text-[15px] text-[var(--text-secondary)] leading-[1.6] max-w-[60ch]">
+        <p className="text-[15px] text-[var(--text-secondary)] leading-[1.6] max-w-[60ch] [text-wrap:balance]">
           Do these in order. The first ones help the most.
         </p>
       </div>
@@ -177,18 +174,22 @@ export default function ActionPlanSection({ data }) {
 
                   {/* Why and How */}
                   <div className="space-y-2 pt-1 border-t border-[var(--border)]/60 text-[15px] leading-[1.6]">
-                    <div>
-                      <span className="font-semibold text-[var(--text)]">Why it matters: </span>
-                      <span className="text-[var(--text-secondary)] max-w-[68ch]">
-                        {item.why}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-semibold text-[var(--text)]">How to do it: </span>
-                      <span className="text-[var(--text)] max-w-[68ch]">
-                        {item.how}
-                      </span>
-                    </div>
+                    {Boolean(item.why) && (
+                      <div>
+                        <span className="font-semibold text-[var(--text)]">Why it matters: </span>
+                        <span className="text-[var(--text-secondary)] max-w-[68ch]">
+                          {item.why}
+                        </span>
+                      </div>
+                    )}
+                    {Boolean(item.how) && (
+                      <div>
+                        <span className="font-semibold text-[var(--text)]">How to do it: </span>
+                        <span className="text-[var(--text)] max-w-[68ch]">
+                          {item.how}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* From your resume quote block */}
@@ -226,6 +227,9 @@ export default function ActionPlanSection({ data }) {
 
                       {isExampleOpen && (
                         <div className="mt-2.5 p-3.5 rounded-[9px] bg-[var(--bg-page)] border border-[var(--border)] space-y-2 text-xs sm:text-sm leading-relaxed">
+                          <div className="text-[11px] font-semibold text-[var(--brand-400)]">
+                            {item.exampleLabel || 'Example'}
+                          </div>
                           <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
                             <span className="font-semibold text-[var(--risk-high)] shrink-0 sm:w-16">
                               Before:

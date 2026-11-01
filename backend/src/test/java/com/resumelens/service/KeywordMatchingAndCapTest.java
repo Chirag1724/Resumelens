@@ -221,4 +221,76 @@ class KeywordMatchingAndCapTest {
         assertTrue(suggestionMissing.isEmpty(),
                 "Suggestion missing list must be empty, but had: " + suggestionMissing);
     }
+    /**
+     * (j) An empty keyword list gives skills 50.0, no keyword density risk, and no score cap (scoreCapped false).
+     * Hand-computed literals:
+     * atsScore = 100.0 (all sections present, quantified 40%, no keyword density deduction)
+     * skillsScore = 50.0 (neutral)
+     * impactScore = 100.0 (2 impact bullets with action verbs and metric)
+     * projectScore = 50.0 (neutral no projects)
+     * writingScore = 100.0
+     * professionalismScore = 100.0
+     * uncappedScore = 100.0*0.25 + 50.0*0.25 + 100.0*0.20 + 50.0*0.15 + 100.0*0.10 + 100.0*0.05 = 80.0
+     * overallScore = 80.0 (no cap applied; scoreCapped = false)
+     */
+    @Test
+    void testJ_emptyKeywordListGivesSkills50NoKeywordDensityRiskAndNoCap() {
+        String webDevResume = "EDUCATION\nBachelor of Science in Computer Science\n" +
+                "EXPERIENCE\n" +
+                "- Built responsive user interfaces and REST APIs achieving 40% performance gain\n" +
+                "- Managed MySQL database and deployment pipelines\n" +
+                "SKILLS\n" +
+                "React, Next.js, Node.js, Express, JavaScript, TypeScript, HTML, CSS, Tailwind, MySQL, Git";
+
+        String emptyJd = "   ";
+        ATSScoreEngine.ScoreResult r = engine.score(webDevResume, emptyJd, false, false);
+
+        assertEquals(50.0, r.skillsScore(), 0.01, "Skills score must be 50.0 neutral literal");
+        assertFalse(r.scoreCapped(), "scoreCapped must be false when keyword list is empty");
+        assertEquals(80.0, r.overallScore(), 0.01, "Overall score must equal 80.0 literal without capping");
+        assertEquals(80.0, r.uncappedScore(), 0.01, "Uncapped score must equal 80.0 literal");
+        assertEquals(100.0, r.atsScore(), 0.01, "ATS score must equal 100.0 literal with no keyword deduction");
+        assertTrue(r.risks().stream().noneMatch(rk -> rk.code().contains("KEYWORD_DENSITY")),
+                "No keyword density risk should be recorded");
+        assertTrue(r.matchedKeywords().isEmpty(), "Matched keywords list must be empty");
+        assertTrue(r.missingKeywords().isEmpty(), "Missing keywords list must be empty");
+    }
+
+    /**
+     * (k) One keyword that is not matched gives skills 0.0, keyword density below 30 risk, and the job fit cap.
+     * Hand-computed literals:
+     * JD keyword: "solidity" (1 keyword, not in resume)
+     * atsScore = 85.0 (100.0 - 15.0 keyword density deduction)
+     * skillsScore = 0.0 (0 of 1 matched, 0.0 cosine bonus)
+     * impactScore = 100.0
+     * projectScore = 50.0
+     * writingScore = 100.0
+     * professionalismScore = 100.0
+     * uncappedScore = 85.0*0.25 + 0.0*0.25 + 100.0*0.20 + 50.0*0.15 + 100.0*0.10 + 100.0*0.05 = 63.75
+     * skillsScore 0.0 < 40.0 -> cap 54.0 applied
+     * overallScore = 54.0
+     * scoreCapped = true
+     */
+    @Test
+    void testK_oneUnmatchedKeywordGivesSkills0KeywordDensityRiskAndCap() {
+        String webDevResume = "EDUCATION\nBachelor of Science in Computer Science\n" +
+                "EXPERIENCE\n" +
+                "- Built responsive user interfaces and REST APIs achieving 40% performance gain\n" +
+                "- Managed MySQL database and deployment pipelines\n" +
+                "SKILLS\n" +
+                "React, Next.js, Node.js, Express, JavaScript, TypeScript, HTML, CSS, Tailwind, MySQL, Git";
+
+        String unmatchedJd = "solidity";
+        ATSScoreEngine.ScoreResult r = engine.score(webDevResume, unmatchedJd, false, false);
+
+        assertEquals(0.0, r.skillsScore(), 0.01, "Skills score must be 0.0 literal");
+        assertTrue(r.scoreCapped(), "scoreCapped must be true when skills score is 0.0");
+        assertEquals(63.75, r.uncappedScore(), 0.01, "Uncapped score must equal 63.75 literal");
+        assertEquals(54.0, r.overallScore(), 0.01, "Overall score must be capped at 54.0 literal");
+        assertEquals(85.0, r.atsScore(), 0.01, "ATS score must equal 85.0 literal after -15 keyword deduction");
+        assertTrue(r.risks().stream().anyMatch(rk -> "KEYWORD_DENSITY_BELOW_30".equals(rk.code())),
+                "KEYWORD_DENSITY_BELOW_30 risk must be present");
+        assertEquals(List.of(), r.matchedKeywords());
+        assertEquals(List.of("solidity"), r.missingKeywords());
+    }
 }

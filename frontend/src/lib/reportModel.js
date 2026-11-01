@@ -1,10 +1,34 @@
 import {
   VERDICTS,
+  QUALITY_ONLY_VERDICT,
   CATEGORIES,
   EFFORT,
   IMPORTANCE,
   RISK_COPY,
+  SUGGESTION_COPY,
 } from '../content/reportCopy.js';
+import { formatScore } from './format.js';
+import { prettySkill } from './skillNames.js';
+
+export { QUALITY_ONLY_VERDICT };
+
+export const SCALE_SEGMENT_WIDTHS = [40, 15, 15, 15, 15];
+export const SCALE_WIDTHS = SCALE_SEGMENT_WIDTHS;
+export const TIER_WIDTHS = {
+  POOR: 40,
+  WEAK: 15,
+  MODERATE: 15,
+  STRONG: 15,
+  EXCELLENT: 15,
+};
+
+export function scaleMarkerPosition(score) {
+  const num = Number(score);
+  const valid = Number.isFinite(num) ? num : 0;
+  return Math.max(0, Math.min(100, valid));
+}
+export const getMarkerPosition = scaleMarkerPosition;
+export const markerPosition = scaleMarkerPosition;
 
 function parseKeywordsList(raw) {
   if (!raw) return [];
@@ -30,8 +54,53 @@ export function tierFor(overallScore) {
   return 'POOR';
 }
 
-export function verdictFor(overallScore) {
-  const tier = tierFor(overallScore);
+export function areKeywordListsEmpty(dataOrMatched, maybeMissing) {
+  if (typeof dataOrMatched === 'boolean') {
+    return dataOrMatched;
+  }
+  if (
+    Array.isArray(dataOrMatched) ||
+    Array.isArray(maybeMissing) ||
+    (maybeMissing !== undefined && (typeof dataOrMatched === 'string' || typeof maybeMissing === 'string'))
+  ) {
+    const matched = parseKeywordsList(dataOrMatched);
+    const missing = parseKeywordsList(maybeMissing);
+    return matched.length === 0 && missing.length === 0;
+  }
+  if (dataOrMatched && typeof dataOrMatched === 'object') {
+    if (typeof dataOrMatched.isKeywordListEmpty === 'boolean') {
+      return dataOrMatched.isKeywordListEmpty;
+    }
+    const sections = Array.isArray(dataOrMatched.sectionScores) ? dataOrMatched.sectionScores : [];
+    const skillsSection = sections.find((s) => s.sectionName === 'SKILLS_VALIDATION');
+    const matchedRaw = skillsSection ? skillsSection.matchedKeywords : dataOrMatched.matchedKeywords;
+    const missingRaw = skillsSection ? skillsSection.missingKeywords : dataOrMatched.missingKeywords;
+    const matched = parseKeywordsList(matchedRaw);
+    const missing = parseKeywordsList(missingRaw);
+    return matched.length === 0 && missing.length === 0;
+  }
+  return false;
+}
+
+export function verdictFor(overallScoreOrData, matchedOrOptionsOrEmpty, missing) {
+  let score = 0;
+  let isQualityOnly = false;
+
+  if (typeof overallScoreOrData === 'object' && overallScoreOrData !== null) {
+    score = overallScoreOrData.overallScore !== undefined ? Number(overallScoreOrData.overallScore) : 0;
+    isQualityOnly = areKeywordListsEmpty(overallScoreOrData);
+  } else {
+    score = Number(overallScoreOrData) || 0;
+    if (matchedOrOptionsOrEmpty !== undefined) {
+      isQualityOnly = areKeywordListsEmpty(matchedOrOptionsOrEmpty, missing);
+    }
+  }
+
+  if (isQualityOnly) {
+    return QUALITY_ONLY_VERDICT;
+  }
+
+  const tier = tierFor(score);
   return VERDICTS[tier];
 }
 
@@ -85,8 +154,7 @@ export function pointsEarned(sectionScore, weight) {
   const score = Number(sectionScore) || 0;
   const w = Number(weight) || 0;
   const earned = (score * w) / 100;
-  const rounded = (Math.round((earned + Number.EPSILON) * 10) / 10).toFixed(1);
-  return `${rounded} of ${w}`;
+  return `${formatScore(earned)} of ${formatScore(w)}`;
 }
 
 export function keywordBand(percent) {
@@ -102,9 +170,12 @@ export function summaryFacts(data) {
   const matched = parseKeywordsList(skillsSection?.matchedKeywords);
   const missing = parseKeywordsList(skillsSection?.missingKeywords);
   const totalKeywords = matched.length + missing.length;
-  const percent = totalKeywords > 0
-    ? Math.round((matched.length / totalKeywords) * 100)
-    : Math.round(Number(data?.keywordMatchPercent) || 0);
+  const isKeywordListEmpty = matched.length === 0 && missing.length === 0;
+  const percent = isKeywordListEmpty
+    ? null
+    : (totalKeywords > 0
+        ? Math.round((matched.length / totalKeywords) * 100)
+        : Math.round(Number(data?.keywordMatchPercent) || 0));
 
   const risks = Array.isArray(data?.risks) ? data.risks : [];
   const riskCount = risks.length;
@@ -130,7 +201,7 @@ export function summaryFacts(data) {
   }
 
   return {
-    skillsCovered: `${matched.length} of ${totalKeywords} skills`,
+    skillsCovered: isKeywordListEmpty ? 'Not scored' : `${matched.length} of ${totalKeywords} skills`,
     percent,
     keywordPercent: percent,
     riskCount,
@@ -161,17 +232,22 @@ export function buildActionPlan(data) {
 
   // 1. Cap item when capped
   if (isCapped && cInfo) {
-    const moreText = cInfo.moreSkills !== null ? `${cInfo.moreSkills} or so ` : '';
+    const why = `Your score is held at ${formatScore(cInfo.cap)} because your skills match is below ${formatScore(cInfo.threshold)}.`;
+    const how = cInfo.moreSkills !== null
+      ? `Add about ${cInfo.moreSkills} more of the missing skills you genuinely have, inside your bullets.`
+      : 'Add the missing skills you genuinely have, inside your bullets.';
+    const gainText = cInfo.threshold === 60
+      ? `Could lift your score from ${formatScore(cInfo.cap)} to about ${formatScore(cInfo.uncapped)}`
+      : `Could lift your score from ${formatScore(cInfo.cap)} to up to 69`;
+
     plan.push({
       id: 'cap',
       title: 'Match the job better',
-      why: `Your score is held at ${cInfo.cap} because the match with the job is low.`,
-      how: `Add the ${moreText}missing skills you genuinely have, inside your bullets.`,
+      why,
+      how,
       effort: EFFORT.CONTENT,
       importance: IMPORTANCE.HIGH,
-      gainText: cInfo.uncapped > cInfo.cap
-        ? `Could raise your overall score by up to ${Number((cInfo.uncapped - cInfo.cap).toFixed(1))} points`
-        : '',
+      gainText,
       example: null,
       fromResume: null,
     });
@@ -186,7 +262,7 @@ export function buildActionPlan(data) {
   if (!isCapped && missingList.length > 0 && (keywordsSuggestion || densityRisk)) {
     const riskCopy = densityRisk ? RISK_COPY[densityRisk.code] : null;
     const gainText = densityRisk
-      ? `Could raise your overall score by up to ${pointsGain(densityRisk)} points`
+      ? `Could raise your overall score by up to ${formatScore(pointsGain(densityRisk))} points`
       : '';
     const importance = densityRisk
       ? (IMPORTANCE[densityRisk.severity] || IMPORTANCE.HIGH)
@@ -201,7 +277,7 @@ export function buildActionPlan(data) {
       importance,
       gainText,
       example: riskCopy?.example || null,
-      fromResume: keywordsSuggestion?.example || null,
+      fromResume: null,
     });
   }
 
@@ -224,15 +300,18 @@ export function buildActionPlan(data) {
     const copy = RISK_COPY[risk.code];
     const title = copy ? copy.title : risk.title;
     const why = copy ? copy.why : risk.description;
-    const how = copy ? copy.fix : risk.fix;
+    let how = copy ? copy.fix : risk.fix;
+    if (risk.code === 'REPEATED_WORDS') {
+      how = `${how} Names of organizations or tools can repeat naturally. You can ignore those.`.trim();
+    }
     const effort = copy ? (EFFORT[copy.effort] || copy.effort) : EFFORT.QUICK;
     const importance = IMPORTANCE[risk.severity] || risk.severity || 'Medium importance';
     const example = copy?.example || null;
     const sectionLabel = CATEGORIES[risk.section]?.label || risk.section;
     const points = Number(risk.points) || 0;
     const gainText = isCapped
-      ? `Raises your ${sectionLabel} score by up to ${points} points`
-      : `Could raise your overall score by up to ${pointsGain(risk)} points`;
+      ? `Raises your ${sectionLabel} score by up to ${formatScore(points)} points`
+      : `Could raise your overall score by up to ${formatScore(pointsGain(risk))} points`;
 
     plan.push({
       id: risk.code || `risk-${risk.title}`,
@@ -263,23 +342,102 @@ export function buildActionPlan(data) {
     if (coveringRiskCode) {
       const targetItem = plan.find((item) => item._code === coveringRiskCode || item.id === coveringRiskCode);
       if (targetItem) {
-        targetItem.fromResume = suggestion.example || null;
+        if (suggestion.code === 'WEAK_VERBS') {
+          targetItem.fromResume = suggestion.example || null;
+        } else if (suggestion.code === 'QUANTIFY') {
+          targetItem.fromResume = null;
+          targetItem.example = SUGGESTION_COPY.QUANTIFY.example;
+          targetItem.exampleLabel = 'Example';
+        } else if (suggestion.code === 'STRUCTURE') {
+          targetItem.fromResume = null;
+          if (targetItem.example) {
+            targetItem.exampleLabel = 'Example';
+          }
+        }
         continue;
       }
     }
 
-    plan.push({
-      id: suggestion.code || `suggestion-${suggestion.title}`,
-      title: suggestion.title,
-      why: suggestion.description,
-      how: suggestion.description,
-      effort: EFFORT.QUICK,
-      importance: IMPORTANCE[suggestion.priority] || suggestion.priority || 'Medium importance',
-      gainText: '',
-      example: null,
-      fromResume: suggestion.example || null,
-      _code: suggestion.code,
-    });
+    const sCopy = SUGGESTION_COPY[suggestion.code];
+    if (suggestion.code === 'WEAK_VERBS') {
+      plan.push({
+        id: 'WEAK_VERBS',
+        title: sCopy.title,
+        why: sCopy.why,
+        how: sCopy.how,
+        effort: EFFORT[sCopy.effort] || sCopy.effort,
+        importance: IMPORTANCE[suggestion.priority] || IMPORTANCE.HIGH,
+        gainText: '',
+        example: null,
+        fromResume: suggestion.example || null,
+        _code: 'WEAK_VERBS',
+      });
+    } else if (suggestion.code === 'QUANTIFY') {
+      const impactSection = sections.find((s) => s.sectionName === 'IMPACT_ACHIEVEMENTS');
+      const impactScore = impactSection ? Number(impactSection.score) || 0 : (Number(data.impactScore) || 0);
+
+      let n = null;
+      if (suggestion.description && typeof suggestion.description === 'string') {
+        const match = suggestion.description.trim().match(/^(\d+)/);
+        if (match) {
+          n = parseInt(match[1], 10);
+        }
+      }
+
+      let why = sCopy.why;
+      if (n !== null) {
+        const bulletSentence = n === 1 ? '1 of your bullets has no number.' : `${n} of your bullets have no number.`;
+        why = `${why} ${bulletSentence}`;
+      }
+      let importance = IMPORTANCE[suggestion.priority] || IMPORTANCE.MEDIUM;
+      if (impactScore >= 85) {
+        importance = IMPORTANCE.LOW;
+        why = `Optional. Your bullets already show clear results, so this is polish. ${why}`;
+      }
+
+      plan.push({
+        id: 'QUANTIFY',
+        title: sCopy.title,
+        why,
+        how: sCopy.how,
+        effort: EFFORT[sCopy.effort] || sCopy.effort,
+        importance,
+        gainText: '',
+        example: sCopy.example,
+        exampleLabel: 'Example',
+        fromResume: null,
+        _code: 'QUANTIFY',
+      });
+    } else if (suggestion.code === 'STRUCTURE') {
+      plan.push({
+        id: 'STRUCTURE',
+        title: sCopy.title,
+        why: sCopy.why,
+        how: sCopy.how,
+        effort: EFFORT[sCopy.effort] || sCopy.effort,
+        importance: IMPORTANCE[suggestion.priority] || IMPORTANCE.QUICK || 'Quick fix',
+        gainText: '',
+        example: sCopy.example || null,
+        exampleLabel: 'Example',
+        fromResume: null,
+        _code: 'STRUCTURE',
+      });
+    } else {
+      // Unknown suggestion code
+      // Rule: "A why and a how must never be the same sentence; if the copy is missing for a code, show only one of them."
+      plan.push({
+        id: suggestion.code || `suggestion-${suggestion.title}`,
+        title: suggestion.title,
+        why: suggestion.description || '',
+        how: '',
+        effort: EFFORT.QUICK,
+        importance: IMPORTANCE[suggestion.priority] || suggestion.priority || 'Medium importance',
+        gainText: '',
+        example: null,
+        fromResume: null,
+        _code: suggestion.code,
+      });
+    }
   }
 
   return plan.slice(0, 6).map((item) => {
@@ -289,6 +447,12 @@ export function buildActionPlan(data) {
 }
 
 export default {
+  SCALE_SEGMENT_WIDTHS,
+  SCALE_WIDTHS,
+  TIER_WIDTHS,
+  scaleMarkerPosition,
+  getMarkerPosition,
+  markerPosition,
   tierFor,
   verdictFor,
   capInfo,
@@ -297,5 +461,6 @@ export default {
   keywordBand,
   summaryFacts,
   buildActionPlan,
+  areKeywordListsEmpty,
+  QUALITY_ONLY_VERDICT,
 };
-

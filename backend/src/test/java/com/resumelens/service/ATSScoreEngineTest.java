@@ -439,10 +439,15 @@ class ATSScoreEngineTest {
 
     @Test
     void should_returnZeroSkillsScore_whenJdIsBlankProducingNoKeywords() {
-        // Blank JD → topKeywords returns [] → calcSkills short-circuits to 0.0
+        // Blank JD -> topKeywords returns [] -> calcSkills produces 50.0 neutral score, no keyword density risk, no cap
         ATSScoreEngine.ScoreResult r = engine.score(TestData.GOOD_RESUME, "   ", false, false);
-        assertEquals(0.0, r.skillsScore(), 0.01,
-                "Blank JD produces no keywords → skillsScore should be 0");
+        assertEquals(50.0, r.skillsScore(), 0.01,
+                "Blank JD produces no keywords -> skillsScore should be 50.0 neutral");
+        assertFalse(r.scoreCapped(), "Blank JD produces no keywords -> scoreCapped must be false");
+        assertEquals(60.0, r.overallScore(), 0.01, "Blank JD overallScore should equal 60.0 uncapped literal");
+        assertEquals(100.0, r.atsScore(), 0.01, "Blank JD must not apply keyword density deduction to atsScore");
+        assertTrue(r.risks().stream().noneMatch(rk -> rk.code().contains("KEYWORD_DENSITY")),
+                "Blank JD must not record any keyword density risk");
     }
 
     @Test

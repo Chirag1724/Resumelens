@@ -1,4 +1,5 @@
 import { getScoreDetails } from '../lib/score';
+import { formatScore } from '../lib/format';
 
 /**
  * SectionScoreBar: Horizontal progress bar for a scoring dimension showing
@@ -19,8 +20,9 @@ export default function SectionScoreBar({
   status,
   feedback,
 }) {
-  const numScore = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
-  const scoreInfo = getScoreDetails(status || numScore);
+  const rawScore = Number(score) || 0;
+  const numScore = Math.max(0, Math.min(100, rawScore));
+  const scoreInfo = getScoreDetails(status || rawScore);
 
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-5">
@@ -38,7 +40,7 @@ export default function SectionScoreBar({
 
         <div className="flex items-center gap-3">
           <span className="font-heading font-bold text-sm text-[var(--text)]">
-            {numScore}
+            {formatScore(rawScore)}
             <span className="text-xs font-normal text-[var(--text-tertiary)]"> / 100</span>
           </span>
           <span
@@ -63,7 +65,7 @@ export default function SectionScoreBar({
             backgroundColor: scoreInfo.color,
           }}
           role="progressbar"
-          aria-valuenow={numScore}
+          aria-valuenow={rawScore}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-label={`${name} score`}

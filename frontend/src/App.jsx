@@ -228,6 +228,11 @@ export default function App() {
       <AuthProvider>
         <ScrollToTop />
         <PageBackground isAuth={isAuth}>
+          {/* Top viewport background fade strip behind floating top bar */}
+          <div
+            className="fixed top-0 left-0 right-0 h-[68px] sm:h-[80px] bg-gradient-to-b from-[var(--bg-page)] via-[var(--bg-page)] to-transparent pointer-events-none z-45"
+            aria-hidden="true"
+          />
           <TopBar />
           <main
             className={`flex-1 w-full ${

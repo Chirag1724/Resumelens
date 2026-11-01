@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { Sparkles, CheckCircle2, Info, AlertTriangle, AlertCircle } from 'lucide-react';
 import { getScoreDetails } from '../lib/score';
+import { formatScore } from '../lib/format';
 
 const TIER_ICONS = {
   EXCELLENT: Sparkles,
@@ -34,8 +35,10 @@ export default function ScoreGauge({
   className = '',
 }) {
   const gradientId = useId();
-  const numScore = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
-  const scoreInfo = getScoreDetails(numScore);
+  const rawScore = Number(score) || 0;
+  const numScore = Math.max(0, Math.min(100, rawScore));
+  const scoreInfo = getScoreDetails(rawScore);
+
   const displayLabel = tierLabel || scoreInfo.label;
   const TierIcon = TIER_ICONS[scoreInfo.tier] || CheckCircle2;
 
@@ -103,7 +106,7 @@ export default function ScoreGauge({
             className="font-heading font-extrabold text-[var(--text)] tracking-tight leading-none"
             style={{ fontSize: '48px' }}
           >
-            {numScore}
+            {formatScore(rawScore)}
           </span>
           <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--text-tertiary)] mt-1">
             out of 100
@@ -129,7 +132,7 @@ export default function ScoreGauge({
       {/* Capped score notice */}
       {Boolean(scoreCapped) && (
         <p className="mt-3 text-xs text-[var(--text-secondary)] text-center max-w-xs leading-relaxed">
-          Score limited because the job match is low. Without the limit: {uncappedScore}
+          Score limited because the skills match is below 60. Without the limit: {formatScore(uncappedScore)}
         </p>
       )}
     </div>

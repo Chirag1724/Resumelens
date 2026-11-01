@@ -1,6 +1,7 @@
 import { CATEGORIES } from '../content/reportCopy';
 import { tierFor, pointsEarned } from '../lib/reportModel';
 import { getScoreDetails } from '../lib/score';
+import { formatScore } from '../lib/format';
 import {
   FileCheck,
   Cpu,
@@ -41,16 +42,13 @@ export default function ScoreBreakdownSection({ data }) {
     <section id="breakdown" aria-labelledby="breakdown-heading" className="scroll-mt-36">
       {/* Section Header */}
       <div className="mb-5 space-y-1.5">
-        <span className="text-[13px] font-semibold text-[var(--brand-500)] tracking-wide">
-          Score breakdown
-        </span>
         <h2
           id="breakdown-heading"
-          className="text-2xl sm:text-[28px] font-heading font-bold text-[var(--text)] leading-tight"
+          className="text-2xl sm:text-[28px] font-heading font-bold text-[var(--text)] leading-tight [text-wrap:balance]"
         >
           Score breakdown
         </h2>
-        <p className="text-[15px] text-[var(--text-secondary)] leading-[1.6] max-w-[60ch]">
+        <p className="text-[15px] text-[var(--text-secondary)] leading-[1.6] max-w-[60ch] [text-wrap:balance]">
           A detailed look at your scores across the six evaluation categories.
         </p>
       </div>
@@ -60,12 +58,12 @@ export default function ScoreBreakdownSection({ data }) {
         {categoryKeys.map((catKey) => {
           const cat = CATEGORIES[catKey];
           const sectionData = rawSections.find((s) => s.sectionName === catKey);
-          const score = sectionData ? Math.max(0, Math.min(100, Math.round(Number(sectionData.score) || 0))) : 0;
-          const tier = tierFor(score);
-          const tierInfo = getScoreDetails(score);
+          const exactScore = sectionData ? Number(sectionData.score) || 0 : 0;
+          const tier = tierFor(exactScore);
+          const tierInfo = getScoreDetails(exactScore);
           const TierIcon = TIER_ICONS[tier] || Info;
           const CategoryIcon = CATEGORY_ICONS[catKey] || FileCheck;
-          const earned = pointsEarned(score, cat.weight);
+          const earned = pointsEarned(exactScore, cat.weight);
 
           const meaningLine =
             tier === 'EXCELLENT' || tier === 'STRONG'
@@ -100,7 +98,7 @@ export default function ScoreBreakdownSection({ data }) {
                   <div className="flex items-baseline justify-between gap-2">
                     <div className="flex items-baseline gap-2">
                       <span className="text-2xl sm:text-3xl font-heading font-extrabold text-[var(--text)]">
-                        {score}
+                        {formatScore(exactScore)}
                       </span>
                       <span className="text-xs text-[var(--text-tertiary)]">/ 100</span>
                     </div>
@@ -126,7 +124,7 @@ export default function ScoreBreakdownSection({ data }) {
                   <div
                     role="progressbar"
                     aria-label={`${cat.label} score`}
-                    aria-valuenow={score}
+                    aria-valuenow={exactScore}
                     aria-valuemin="0"
                     aria-valuemax="100"
                     className="w-full h-2 rounded-full bg-[var(--bg-page)] border border-[var(--border)] overflow-hidden"
@@ -134,7 +132,7 @@ export default function ScoreBreakdownSection({ data }) {
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{
-                        width: `${score}%`,
+                        width: `${Math.max(0, Math.min(100, exactScore))}%`,
                         backgroundColor: tierInfo.color,
                       }}
                     />
@@ -154,7 +152,7 @@ export default function ScoreBreakdownSection({ data }) {
 
               {/* How to improve tips or Nothing to fix */}
               <div className="pt-3 border-t border-[var(--border)] text-xs sm:text-[13px]">
-                {score < 85 ? (
+                {exactScore < 85 ? (
                   <div className="space-y-1.5">
                     <span className="font-semibold text-[var(--brand-400)] text-xs">
                       How to improve:
@@ -179,4 +177,3 @@ export default function ScoreBreakdownSection({ data }) {
     </section>
   );
 }
-

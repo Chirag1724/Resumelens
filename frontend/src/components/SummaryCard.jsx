@@ -1,4 +1,5 @@
 import { SCORING_CATEGORIES } from '../lib/scoring';
+import { formatScore } from '../lib/format';
 import { Sparkles } from 'lucide-react';
 
 /**
@@ -21,7 +22,7 @@ export default function SummaryCard({
   missingKeywordCount = 0,
   scoreCapped = false,
 }) {
-  const roundedOverall = Math.round(Number(overallScore) || 0);
+  const formattedOverall = formatScore(overallScore);
 
   // Map section scores to display names
   const categoryMap = new Map(
@@ -30,7 +31,7 @@ export default function SummaryCard({
 
   const enrichedSections = sectionScores.map((sec) => ({
     name: categoryMap.get(sec.sectionName) || sec.sectionName,
-    score: Math.round(Number(sec.score) || 0),
+    score: Number(sec.score) || 0,
   }));
 
   let strongest = { name: 'ATS Compatibility', score: 0 };
@@ -62,11 +63,13 @@ export default function SummaryCard({
     findingPhrase = `${riskPart} and ${kwPart} were found.`;
   }
 
+  const skillsScore = Number(sectionScores.find((s) => s.sectionName === 'SKILLS_VALIDATION')?.score) || 0;
+  const threshold = skillsScore < 40 ? 40 : 60;
   const cappedSentence = scoreCapped
-    ? ' The overall score is limited because the job match is low.'
+    ? ` The overall score is limited because the skills match is below ${formatScore(threshold)}.`
     : '';
 
-  const summaryText = `Your resume scored ${roundedOverall} out of 100, rated ${tierLabel}. Strongest area: ${strongest.name} (${strongest.score}). Weakest area: ${weakest.name} (${weakest.score}). ${findingPhrase}${cappedSentence}`;
+  const summaryText = `Your resume scored ${formattedOverall} out of 100, rated ${tierLabel}. Strongest area: ${strongest.name} (${formatScore(strongest.score)}). Weakest area: ${weakest.name} (${formatScore(weakest.score)}). ${findingPhrase}${cappedSentence}`;
 
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-6 relative overflow-hidden">

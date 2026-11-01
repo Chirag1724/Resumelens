@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Calendar, ChevronRight, Trash2 } from 'lucide-react';
 import { getScoreDetails } from '../lib/score';
+import { formatScore } from '../lib/format';
 import { deleteHistoryItem } from '../api/client';
 
 function formatDate(isoString) {
@@ -107,7 +108,7 @@ export default function HistoryCard({ item, onDelete }) {
         <div className="flex items-center gap-3 sm:gap-4 shrink-0 sm:self-center">
           <div className="text-right">
             <div className="font-heading font-extrabold text-2xl text-[var(--text)] leading-none mb-1">
-              {score.toFixed(1)}
+              {formatScore(score)}
             </div>
             <span
               className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-[6px]"

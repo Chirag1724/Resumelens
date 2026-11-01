@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CATEGORIES, TIER_RANGES, DISCLAIMER, GLOSSARY } from '../content/reportCopy';
 import { pointsEarned } from '../lib/reportModel';
+import { formatScore } from '../lib/format';
 import { ChevronDown, Calculator, AlertTriangle, BookOpen } from 'lucide-react';
 
 export default function DetailsSection({ data }) {
@@ -23,22 +24,30 @@ export default function DetailsSection({ data }) {
   // Check if limit rule is relevant (either score capped or skills < 60)
   const skillsSection = rawSections.find((s) => s.sectionName === 'SKILLS_VALIDATION');
   const skillsScore = skillsSection ? Number(skillsSection.score) || 0 : 0;
-  const isLimitRelevant = Boolean(data?.scoreCapped) || skillsScore < 60;
+  const matched = Array.isArray(skillsSection?.matchedKeywords)
+    ? skillsSection.matchedKeywords
+    : (typeof skillsSection?.matchedKeywords === 'string' && skillsSection.matchedKeywords.startsWith('[')
+        ? JSON.parse(skillsSection.matchedKeywords || '[]')
+        : []);
+  const missing = Array.isArray(skillsSection?.missingKeywords)
+    ? skillsSection.missingKeywords
+    : (typeof skillsSection?.missingKeywords === 'string' && skillsSection.missingKeywords.startsWith('[')
+        ? JSON.parse(skillsSection.missingKeywords || '[]')
+        : []);
+  const isKeywordListEmpty = matched.length === 0 && missing.length === 0;
+  const isLimitRelevant = !isKeywordListEmpty && (Boolean(data?.scoreCapped) || skillsScore < 60);
 
   return (
     <section id="details" aria-labelledby="details-heading" className="scroll-mt-36">
       {/* Section Header */}
       <div className="mb-5 space-y-1.5">
-        <span className="text-[13px] font-semibold text-[var(--brand-500)] tracking-wide">
-          Details
-        </span>
         <h2
           id="details-heading"
-          className="text-2xl sm:text-[28px] font-heading font-bold text-[var(--text)] leading-tight"
+          className="text-2xl sm:text-[28px] font-heading font-bold text-[var(--text)] leading-tight [text-wrap:balance]"
         >
           Details
         </h2>
-        <p className="text-[15px] text-[var(--text-secondary)] leading-[1.6] max-w-[60ch]">
+        <p className="text-[15px] text-[var(--text-secondary)] leading-[1.6] max-w-[60ch] [text-wrap:balance]">
           How this score is calculated, what this report cannot tell you, and terms used.
         </p>
       </div>
@@ -89,7 +98,7 @@ export default function DetailsSection({ data }) {
                     {categoryKeys.map((catKey) => {
                       const cat = CATEGORIES[catKey];
                       const s = rawSections.find((item) => item.sectionName === catKey);
-                      const score = s ? Math.max(0, Math.min(100, Math.round(Number(s.score) || 0))) : 0;
+                      const score = s ? Number(s.score) || 0 : 0;
                       const earned = pointsEarned(score, cat.weight);
                       return (
                         <tr key={catKey} className="text-[var(--text-secondary)]">
@@ -97,7 +106,7 @@ export default function DetailsSection({ data }) {
                             {cat.label}
                           </td>
                           <td className="py-2.5 px-4">{cat.weight}%</td>
-                          <td className="py-2.5 px-4">{score} / 100</td>
+                          <td className="py-2.5 px-4">{formatScore(score)} / 100</td>
                           <td className="py-2.5 pl-4 text-right font-mono text-[var(--text)]">
                             {earned}
                           </td>

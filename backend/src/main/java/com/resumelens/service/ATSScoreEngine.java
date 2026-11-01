@@ -287,7 +287,9 @@ public class ATSScoreEngine {
             professionalism * WEIGHT_PROFESSIONAL
         );
 
-        CapResult capResult = applyScoreCap(uncapped, skills);
+        CapResult capResult = jdKeywords.isEmpty()
+            ? new CapResult(uncapped, false)
+            : applyScoreCap(uncapped, skills);
         double overall = capResult.cappedScore();
         boolean scoreCapped = capResult.scoreCapped();
 
@@ -348,13 +350,15 @@ public class ATSScoreEngine {
         }
 
         // Keyword density deduction (–15 or –8, not both)
-        double matchPct = calcKeywordMatchPercent(resumeText, jdKeywords);
-        if (matchPct < 0.30) {
-            score -= 15;
-            recordRisk(risks, "KEYWORD_DENSITY_BELOW_30", 15.0, SectionScore.ATS_COMPATIBILITY);
-        } else if (matchPct < 0.50) {
-            score -= 8;
-            recordRisk(risks, "KEYWORD_DENSITY_30_TO_50", 8.0, SectionScore.ATS_COMPATIBILITY);
+        if (!jdKeywords.isEmpty()) {
+            double matchPct = calcKeywordMatchPercent(resumeText, jdKeywords);
+            if (matchPct < 0.30) {
+                score -= 15;
+                recordRisk(risks, "KEYWORD_DENSITY_BELOW_30", 15.0, SectionScore.ATS_COMPATIBILITY);
+            } else if (matchPct < 0.50) {
+                score -= 8;
+                recordRisk(risks, "KEYWORD_DENSITY_30_TO_50", 8.0, SectionScore.ATS_COMPATIBILITY);
+            }
         }
 
         // No measurable achievements (-5)
@@ -368,7 +372,7 @@ public class ATSScoreEngine {
 
     // 2. Skills Validation (SCORING_RULES.md)
     private double calcSkills(String resumeText, String jdText, List<String> jdKeywords) {
-        if (jdKeywords.isEmpty()) return 0.0;
+        if (jdKeywords.isEmpty()) return 50.0;
 
         long matched = jdKeywords.stream()
             .filter(kw -> similarity.isKeywordMatched(kw, resumeText))
@@ -480,7 +484,7 @@ public class ATSScoreEngine {
 
         // First-person pronouns (–15)
         if (FIRST_PERSON.matcher(resumeText).find()) {
-            score -= 15;
+                score -= 15;
             recordRisk(risks, "FIRST_PERSON", 15.0, SectionScore.WRITING_QUALITY);
         }
 

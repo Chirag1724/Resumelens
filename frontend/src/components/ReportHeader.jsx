@@ -42,9 +42,10 @@ export default function ReportHeader({
       })
     : null;
 
+  const expYears = Number(data?.experienceYears);
   const experienceText =
-    data?.experienceYears !== undefined && data?.experienceYears !== null && data.experienceYears !== ''
-      ? `${data.experienceYears} ${Number(data.experienceYears) === 1 ? 'year' : 'years'} experience`
+    Number.isFinite(expYears) && expYears > 0
+      ? `${expYears} ${expYears === 1 ? 'year' : 'years'} experience`
       : null;
 
   return (
@@ -52,7 +53,7 @@ export default function ReportHeader({
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-3xl sm:text-4xl font-heading font-extrabold text-[var(--text)] tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-heading font-extrabold text-[var(--text)] tracking-tight [text-wrap:balance]">
               Your resume report
             </h1>
             {reportId && (

@@ -237,59 +237,67 @@ The report page presents a clear overview for non-technical candidates alongside
 - Content container: maximum width 1360px (`max-w-7xl xl:max-w-[1360px]`), centered, with horizontal padding of 16px on mobile, 24px on tablet, and 32px on desktop.
 - Spacing scale: strictly based on an 8px grid scale. Vertical spacing between page sections is 64px on desktop, 48px on tablet, and 40px on mobile.
 - Cards: rendered using the card surface token (`var(--bg-card)`), 1px border (`var(--border)`), radius 12px (18px for the two large hero cards in Overview), padding 24px (20px on mobile), 16px between elements inside a card, and 24px grid gaps (16px on mobile).
-- Section header pattern: small label in sentence case (13px, brand color), an h2 heading (24px to 28px, Manrope 700), a one line subtitle (15px, secondary text, maximum line length 60ch), followed by 20px vertical spacing before section content.
+- Section header pattern: an h2 heading (24px to 28px, Manrope 700) and a subtitle (15px, secondary text, maximum line length 60ch), with `text-wrap: balance` applied to h1, h2, and subtitles so no single word is left on the last line, followed by 20px vertical spacing before section content.
 - Body text: 15px with line height 1.6 and a maximum line length of 68ch. Monospace font is reserved strictly for report UUID identifiers.
 - Heading hierarchy: single h1 on the page ("Your resume report"), h2 for each section, h3 inside cards, with `aria-labelledby` on every section pointing to its h2 heading.
-- Sticky navigation: in-page navigation bar sticky beneath the top bar with links for Overview, Action plan, Job match, Score breakdown, Things to fix, and Details. Active link is tracked and highlighted using `IntersectionObserver` with zero polling. Collapses into a horizontally scrollable chip row on mobile screens. Every section defines `scroll-margin-top` so headings remain visible when navigated to.
+- Sticky navigation: in-page navigation bar truly sticky below the floating top bar (position sticky with top offset equal to top bar height plus 16px). Ancestor containers must not declare overflow properties that break sticky positioning (such as `overflow-x: hidden`). A fixed strip at the top of the viewport, matching the top bar height plus margin and filled with page background fading to transparent at its lower edge, sits behind the top bar and above page content so scrolled text never shows in the gap. Active link is tracked using `IntersectionObserver` with zero polling. Collapses into a horizontally scrollable chip row on mobile screens. Every section defines `scroll-margin-top` so headings remain visible when navigated to.
 - Top navigation bar: solid surface with at least 92 percent opacity and backdrop blur to prevent page content from bleeding through during scroll.
 
 ### 8.2 Sequential Section Structure
 
 #### Section 0: Header
 - Heading: h1 with text "Your resume report".
-- Metadata chips: displays file name, target role, years of experience, and scan date. Empty or null fields are hidden cleanly without empty placeholders.
+- Metadata chips: displays file name, target role, years of experience, and scan date. The experience chip is displayed only when years of experience is greater than 0; blank experience input is omitted from upload requests rather than sent as 0. Empty or null fields are hidden cleanly without empty placeholders.
 - Identifier: monospace display of the report UUID with an inline copy action.
 - Actions: primary button "Improve my resume" (opens `FixPromptModal`), secondary button "Download PDF report", and secondary button "Copy link" with copy confirmation. Helper text beneath buttons: "Anyone with the link can view this report."
 
 #### Section 1: Overview (`id="overview"`)
-- Hero row: two-column layout on desktop (5 and 7 columns out of 12), stacked on mobile.
-- Left hero card (radius 18px): `ScoreGauge` showing overall score out of 100 and qualitative tier label with icon. Segmented scale bar showing all five tiers (Poor, Weak, Moderate, Strong, Excellent) with tier ranges from `TIER_RANGES` and a position marker at the candidate score. When `scoreCapped` is true, displays a highlighted notice derived from `capInfo`: "Your score is held at {cap}. Your resume on its own would score {uncapped}." and "Raise your skills match from {skillsNow} to {threshold} to lift this limit. That is about {moreSkills} more of the job's skills." (omitted if `moreSkills` is null).
-- Right hero card (radius 18px): candidate verdict headline and body copy from `verdictFor(overallScore)`. "Start here" section featuring the first three action plan items as a numbered list with item titles and effort chips, accompanied by a "See all steps" link pointing to `#plan`.
-- Summary fact cards: row of four metric cards beneath the hero cards derived from `summaryFacts` (Skills covered, Things to fix, Strongest area, Needs most work), each featuring an icon, primary value or name, and a short explanatory sentence.
+- Subtitle: "Your match and the most important things to do."
+- Layout: two-column layout on desktop (5 columns left, 7 columns right), stacked on mobile. Both columns align to the top with balanced visual heights.
+- Left column (gauge card): `ScoreGauge` showing overall score out of 100 formatted via `formatScore` (rounding to 1 decimal and dropping trailing .0) and qualitative tier label with icon computed from the exact API score. Five-tier proportional segmented scale bar with proportional segment widths (40%, 15%, 15%, 15%, 15% for Poor, Weak, Moderate, Strong, Excellent) and a linear marker position (69 sits at the right end of Moderate, 40 sits at the left edge of Weak). When `scoreCapped` is true, displays a highlighted notice: "Your score is held at {cap} because your skills match ({skills}) is below {threshold}. Your resume on its own would score {uncapped}." followed by "Raise your skills match to {threshold} to lift this limit. That is about {moreSkills} more of the job's skills." (omitted if `moreSkills` is null).
+- Right column:
+  - Verdict card: candidate headline and body copy from `verdictFor(overallScore, data)` directly followed beneath the text by the "Start here" list (first three action plan items with effort chips) without stretched empty space. When both keyword lists are empty (the job description had no specific skills), the overview does not read like a job match result: the headline is replaced with "Resume quality check" and the body is replaced with "We checked your formatting, writing and results. Paste the full job posting to see how well you match the job." Directly under the verdict body, a note is displayed: "This score reflects your resume's quality only. We could not find specific skills in the job description, so the job match is not included." No tier-based verdict headline (such as "Strong match" or "Partial match") is shown in this case, but the gauge, tier label, and scale are kept.
+  - Fact cards grid: 2 by 2 grid placed directly under the verdict card showing Skills covered, Action steps, Strongest area, and Needs most work. The "Action steps" card displays "{n} steps" where n is the plan length, and "Start with step 1." (or "Nothing to do" with the helper line hidden when n is 0). When both the matched and missing keyword lists are empty, the Skills covered card displays "Not scored" with subtext "Job match is not scored" (never displaying "0 of 0 skills" or a percent). The score cap notice is hidden. All score metrics run through `formatScore`.
 
 #### Section 2: Action Plan (`id="plan"`)
 - Subtitle: "Do these in order. The first ones help the most."
-- Numbered cards for each recommended action item derived from `buildActionPlan` showing title, why it matters, how to do it, importance chip, effort chip, and score gain estimate chip when applicable.
-- Disclosures: "Show example" toggle revealing Before and After comparative rows when concrete examples exist. "From your resume" quotation block when contextual excerpts are available.
-- State: "Mark as done" interactive checkbox stored in React component state only (no browser storage). Completed items remain visible in a calmer, dimmed presentation with a green completion check.
-- Empty state: "No action needed. Your resume matches this job well." when no action items exist.
+- Numbered cards derived from `buildActionPlan`. Prioritized actions include skill capping lifts, suggestion copy rules, and risk fixes.
+- Suggestion copy from `SUGGESTION_COPY` in `src/content/reportCopy.js`:
+  - `WEAK_VERBS`: title "Replace weak phrases", why "Phrases like worked on or responsible for describe duties, not results.", how "Start each bullet with a direct action verb such as led, built or improved.", effort QUICK. Real resume lines keep the label "From your resume".
+  - `QUANTIFY`: title "Add numbers to your bullets", why "Numbers make your results concrete and easy to scan.", how "Pick your three strongest bullets and add a number to each: users, percent, time saved or team size.", effort CONTENT. Displays generic examples with the label "Example". Appends "{n} of your bullets have no number." where n is parsed from the leading integer of the description. When the Impact and Achievements score is 85 or higher, importance is set to LOW and why begins with "Optional. Your bullets already show clear results, so this is polish."
+  - `STRUCTURE`: title "Check your section headings and contact details", why "Your ATS compatibility score is below 70.", how "Use plain headings and put your contact details at the top.", effort QUICK, example label "Example".
+- Capping action item: why "Your score is held at {cap} because your skills match is below {threshold}."; how "Add about {moreSkills} more of the missing skills you genuinely have, inside your bullets." (or "Add the missing skills you genuinely have, inside your bullets." when `moreSkills` is null); gainText "Could lift your score from {cap} to about {uncapped}" when threshold is 60, and "Could lift your score from {cap} to up to 69" when threshold is 40.
+- Quotation label rule: "From your resume" appears only for `WEAK_VERBS` and merged risks with a real line. Generic examples use the label "Example".
+- Distinctness rule: why and how must never be the same sentence. If copy is missing, only one is rendered.
+- State: "Mark as done" interactive checkbox in React component state.
 
 #### Section 3: Job Match (`id="job-match"`)
 - Metric summary: sentence stating "You cover {matched} of {total} skills this job asks for ({percent}%)".
 - Visual bar: two-part segmented bar displaying matched and missing proportions with accessible progressbar semantics.
-- Coverage band: descriptive sentence based on `keywordBand` ("Great coverage.", "Decent coverage. Add the missing skills you have.", or "Low coverage. Many of the job's skills are missing.").
-- Skill pill groups: "Skills you already show" with check icons and "Skills the job asks for that we did not find" with plus icons. Empty groups are hidden; a positive confirmation message is displayed when zero skills are missing.
-- Best practice guidance: callout titled "How to add a skill the right way" with three rules: add only genuine skills, use exact job wording, and integrate skills into project or experience bullets rather than isolated lists.
+- Coverage band: descriptive sentence based on `keywordBand`.
+- Skill pill groups: "Skills you already show" and "Skills the job asks for that we did not find". All keyword names are rendered via `prettySkill` from `src/lib/skillNames.js` (canonical dictionary mapping and capital fallback).
+- Best practice guidance: callout titled "How to add a skill the right way".
 
 #### Section 4: Score Breakdown (`id="breakdown"`)
 - Six category cards in canonical order: ATS compatibility, Skills match, Impact and results, Project quality, Writing quality, Professionalism. Arranged in two columns on tablet and desktop, single column on mobile.
-- Card contents: category label, weight percentage chip, score out of 100 with progress bar and tier label, points earned ("Points earned: X of {weight}"), category definition sentence, qualitative meaning line (good, partial, or needs), and a "How to improve" list of tips when score is below 85, or "Nothing to fix here." when 85 or above.
+- Card contents: category label, weight percentage chip, score out of 100 with progress bar and tier label computed from exact score, points earned ("Points earned: X of {weight}" formatted via `formatScore`), category definition, qualitative meaning line, and "How to improve" tips.
 
 #### Section 5: Things to Fix (`id="issues"`)
-- Subtitle: "These are the same items as the action plan, with more detail."
-- Grouped by severity: Important (HIGH), Worth fixing (MEDIUM), and Small polish (LOW). Empty severity tiers are hidden.
-- Accordion items: real button triggers with `aria-expanded` showing friendly title, importance chip, and effort chip. High importance items start expanded by default.
-- Panel detail: What we found (with raw repeated word listings appended for repeated words risks), Why it matters, How to fix it, and Before/After examples where available.
+- Subtitle: "Detailed findings from the formatting and writing checks. Your action plan also covers your skills match and wording."
+- Grouped by severity: Important (HIGH), Worth fixing (MEDIUM), and Small polish (LOW). Group counts and listings agree strictly with API risks.
+- Accordion items: real button triggers with `aria-expanded` showing title, importance chip, and effort chip. High importance items start expanded by default.
+- Panel detail: What we found, Why it matters, How to fix it, and Before/After examples where available.
+- Repeated words risk (`REPEATED_WORDS`): displays friendly what sentence plus only the substring starting with "Words used more than 5 times:". Note in how text states: "Names of organizations or tools can repeat naturally. You can ignore those."
 - Empty state: "We found no layout, writing or formatting problems." when zero risks are detected.
 
 #### Section 6: Details (`id="details"`)
-- Accordion 1 ("How this score is calculated"): breakdown table showing all six dimensions with weights, scores, and points earned, the formula line "Overall score = sum of points earned", tier threshold ranges from `TIER_RANGES`, and when relevant the skill threshold capping rule in plain words ("If the skills match is below 40, the overall score is limited to 54. From 40 to 59 it is limited to 69.").
+- Accordion 1 ("How this score is calculated"): breakdown table showing all six dimensions with weights, exact scores formatted via `formatScore`, exact points earned formatted via `formatScore`, the formula line "Overall score = sum of points earned", tier threshold ranges from `TIER_RANGES`, and skill capping explanation.
 - Accordion 2 ("What this report cannot tell you"): legal disclaimer text alongside explicit limitations noting keyword/wording comparison, English language optimization, and absence of factual verification.
 - Accordion 3 ("Terms used"): concise explanations of core terminology from `GLOSSARY` (ATS, keyword, tier).
 
 #### Section 7: Next Steps
 - Two-card layout:
-  1. "Improve your wording": three numbered steps ("Generate the improvement prompt", "Paste it into an AI assistant", "Open the result in a LaTeX editor such as Overleaf") and an action button opening `FixPromptModal`.
+  1. "Improve your wording": three numbered steps ("Generate the improvement prompt", "Paste it into an AI assistant", "Open the result in a LaTeX editor") and an action button opening `FixPromptModal`.
   2. "Updated your resume?": description and Re-analyze button navigating back to the scanner.
 - Page footer: fixed disclaimer statement from `DISCLAIMER`.
 
@@ -347,5 +355,7 @@ All copy uses plain English in the second person.
 Sentences stay under 20 words.
 Instructions start with a verb.
 Copy avoids scary words and promises.
-The file `src/content/reportCopy.js` exports verdicts, categories, risk guidance, effort labels, and a glossary.
-The model layer in `src/lib/reportModel.js` formats your action plan and score insights.
+The file `src/content/reportCopy.js` exports verdicts, categories, suggestion copy (`SUGGESTION_COPY`), risk guidance, effort labels, and a glossary.
+The formatting helper `src/lib/format.js` exports `formatScore(n)` to round scores to 1 decimal place and drop a trailing .0.
+The skill display helper `src/lib/skillNames.js` exports `prettySkill(keyword)` to map canonical skill names and title-case non-dictionary keywords.
+The model layer in `src/lib/reportModel.js` formats your action plan, proportional scale bar widths, and score insights.

@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   Info,
   Clock,
-  Sparkles,
 } from 'lucide-react';
 
 const SEVERITY_GROUPS = [
@@ -64,17 +63,14 @@ export default function ThingsToFixSection({ data }) {
     <section id="issues" aria-labelledby="issues-heading" className="scroll-mt-36">
       {/* Section Header */}
       <div className="mb-5 space-y-1.5">
-        <span className="text-[13px] font-semibold text-[var(--brand-500)] tracking-wide">
-          Things to fix
-        </span>
         <h2
           id="issues-heading"
-          className="text-2xl sm:text-[28px] font-heading font-bold text-[var(--text)] leading-tight"
+          className="text-2xl sm:text-[28px] font-heading font-bold text-[var(--text)] leading-tight [text-wrap:balance]"
         >
           Things to fix
         </h2>
-        <p className="text-[15px] text-[var(--text-secondary)] leading-[1.6] max-w-[60ch]">
-          These are the same items as the action plan, with more detail.
+        <p className="text-[15px] text-[var(--text-secondary)] leading-[1.6] max-w-[60ch] [text-wrap:balance]">
+          Detailed findings from the formatting and writing checks. Your action plan also covers your skills match and wording.
         </p>
       </div>
 
@@ -122,14 +118,25 @@ export default function ThingsToFixSection({ data }) {
                     const importanceLabel = IMPORTANCE[risk.severity] || risk.severity || group.label;
                     const rawEffort = copy?.effort ? EFFORT[copy.effort] || copy.effort : 'Quick fix';
 
-                    // Append API description when code is REPEATED_WORDS
+                    // For REPEATED_WORDS: show friendly what sentence plus only the part starting with Words used more than 5 times:
                     let whatFound = copy?.what || risk.description || '';
-                    if (risk.code === 'REPEATED_WORDS' && risk.description) {
-                      whatFound = `${whatFound} ${risk.description}`;
+                    if (risk.code === 'REPEATED_WORDS') {
+                      let repeatPart = '';
+                      if (risk.description && typeof risk.description === 'string') {
+                        const markerIndex = risk.description.indexOf('Words used more than 5 times:');
+                        if (markerIndex !== -1) {
+                          repeatPart = risk.description.slice(markerIndex);
+                        }
+                      }
+                      const baseWhat = copy?.what || '';
+                      whatFound = repeatPart ? `${baseWhat} ${repeatPart}`.trim() : baseWhat;
                     }
 
                     const whyMatters = copy?.why || '';
-                    const howToFix = copy?.fix || risk.fix || '';
+                    let howToFix = copy?.fix || risk.fix || '';
+                    if (risk.code === 'REPEATED_WORDS') {
+                      howToFix = `${howToFix} Names of organizations or tools can repeat naturally. You can ignore those.`.trim();
+                    }
                     const example = copy?.example;
 
                     return (
@@ -160,7 +167,7 @@ export default function ThingsToFixSection({ data }) {
                                   border: `1px solid ${group.border}`,
                                 }}
                               >
-                                <GroupIcon className="w-3 h-3" aria-hidden="true" />
+                                <GroupIcon className="w-3.5 h-3.5" aria-hidden="true" />
                                 <span>{importanceLabel}</span>
                               </span>
 
@@ -246,4 +253,3 @@ export default function ThingsToFixSection({ data }) {
     </section>
   );
 }
-

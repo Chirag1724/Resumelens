@@ -1,3 +1,5 @@
+import { prettySkill } from '../lib/skillNames';
+
 /**
  * KeywordPill: Displays a categorized keyword pill for matched (green-tinted)
  * or missing (orange-tinted) skills without individual percentage metrics.
@@ -17,7 +19,7 @@ export default function KeywordPill({ keyword, variant = 'matched' }) {
           : 'bg-[rgba(255,155,0,0.12)] text-[var(--accent-orange)] border border-[rgba(255,155,0,0.28)]'
       }`}
     >
-      {keyword}
+      {prettySkill(keyword)}
     </span>
   );
 }

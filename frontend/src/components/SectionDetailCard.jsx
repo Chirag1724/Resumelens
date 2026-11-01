@@ -1,17 +1,17 @@
 import { getScoreDetails } from '../lib/score';
+import { formatScore } from '../lib/format';
 
 /**
- * SectionDetailCard: Dimension detail card featuring standard line icon in a 40px
+ * SectionDetailCard: Card for an individual scoring dimension featuring a 40px
  * rounded container, numerical score out of 100, tier label badge, thin progress bar,
- * and a fixed sentence explaining what the category measures.
+ * and static educational description of what the dimension measures.
  *
  * @param {Object} props
- * @param {string} props.sectionName - Category identifier
- * @param {string} props.name - Human-readable dimension title
+ * @param {string} props.name - Dimension display name
  * @param {number} props.score - Dimension score (0 to 100)
- * @param {number} [props.weight] - Category weight percentage
- * @param {string} [props.status] - Status string (e.g. "STRONG", "EXCELLENT")
- * @param {string} props.description - Fixed one-line description from docs/scoring.js
+ * @param {number} [props.weight] - Weight percentage (e.g. 25)
+ * @param {string} [props.status] - Status tier string
+ * @param {string} props.description - Educational copy describing the dimension
  * @param {React.ElementType} [props.icon] - Lucide icon component
  */
 export default function SectionDetailCard({
@@ -22,8 +22,9 @@ export default function SectionDetailCard({
   description,
   icon: Icon,
 }) {
-  const numScore = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
-  const scoreInfo = getScoreDetails(status || numScore);
+  const rawScore = Number(score) || 0;
+  const numScore = Math.max(0, Math.min(100, rawScore));
+  const scoreInfo = getScoreDetails(status || rawScore);
 
   return (
     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[12px] p-5 flex flex-col justify-between hover:border-[var(--border-strong)] transition-colors duration-150">
@@ -56,7 +57,7 @@ export default function SectionDetailCard({
             )}
           </h3>
           <span className="font-heading font-bold text-base text-[var(--text)]">
-            {numScore}
+            {formatScore(rawScore)}
             <span className="text-xs font-normal text-[var(--text-tertiary)]"> / 100</span>
           </span>
         </div>

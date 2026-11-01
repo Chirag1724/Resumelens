@@ -229,4 +229,22 @@ class TfIdfCalculatorTest {
         assertTrue(TfIdfCalculator.COMMON_ENGLISH_WORDS.size() >= 300,
             "Common English words set must have at least 300 words");
     }
+
+    @Test
+    void testRestApisYieldsOneKeywordRestApiAndNotRestOrApis() {
+        String jd = "REST APIs";
+        List<String> keywords = calc.topKeywords(jd, 30);
+        assertEquals(List.of("rest api"), keywords, "Job description with 'REST APIs' must yield one keyword 'rest api'");
+        assertFalse(keywords.contains("rest"), "Must not contain 'rest'");
+        assertFalse(keywords.contains("apis"), "Must not contain 'apis'");
+        assertFalse(keywords.contains("api"), "Must not contain 'api'");
+    }
+
+    @Test
+    void testLoneApiAndApisNeverAppearAsKeywords() {
+        String jd = "Experience with API development and internal APIs.";
+        List<String> keywords = calc.topKeywords(jd, 30);
+        assertFalse(keywords.contains("api"), "Lone 'api' must never appear as a keyword");
+        assertFalse(keywords.contains("apis"), "Lone 'apis' must never appear as a keyword");
+    }
 }

@@ -54,7 +54,7 @@ export default function ReportNav() {
   return (
     <nav
       aria-label="Report sections"
-      className="sticky top-16 sm:top-20 z-40 bg-[var(--bg-page)]/95 backdrop-blur-md border border-[var(--border)] rounded-[12px] p-2 transition-colors shadow-sm"
+      className="sticky top-[84px] sm:top-[92px] z-40 bg-[var(--bg-page)]/95 backdrop-blur-md border border-[var(--border)] rounded-[12px] p-2 transition-colors shadow-sm"
     >
       <div className="w-full overflow-x-auto hide-scrollbar">
         <ul className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap min-w-max">

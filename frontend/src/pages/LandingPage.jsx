@@ -111,12 +111,52 @@ export default function LandingPage() {
   const [activeStep, setActiveStep] = useState(0);
   const [bulletMode, setBulletMode] = useState('after');
   const workflowScrollRef = useRef(null);
+  const isClickingWorkflowRef = useRef(false);
+  const workflowClickTimeoutRef = useRef(null);
 
   useEffect(() => {
     document.title = 'ResumeLens - ATS Resume Scanner';
+    return () => {
+      if (workflowClickTimeoutRef.current) {
+        clearTimeout(workflowClickTimeoutRef.current);
+      }
+    };
   }, []);
 
+  const handleWorkflowScroll = () => {
+    if (isClickingWorkflowRef.current) return;
+    if (!workflowScrollRef.current) return;
+    const container = workflowScrollRef.current;
+    const cards = container.querySelectorAll('.workflow-stage-card');
+    if (!cards.length) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const containerCenter = containerRect.left + containerRect.width / 2;
+
+    let closestIdx = 0;
+    let minDistance = Infinity;
+
+    cards.forEach((card, idx) => {
+      const cardRect = card.getBoundingClientRect();
+      const cardCenter = cardRect.left + cardRect.width / 2;
+      const distance = Math.abs(cardCenter - containerCenter);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestIdx = idx;
+      }
+    });
+
+    setActiveStep((prev) => (prev !== closestIdx ? closestIdx : prev));
+  };
+
   const scrollToWorkflowStep = (idx) => {
+    isClickingWorkflowRef.current = true;
+    if (workflowClickTimeoutRef.current) {
+      clearTimeout(workflowClickTimeoutRef.current);
+    }
+    workflowClickTimeoutRef.current = setTimeout(() => {
+      isClickingWorkflowRef.current = false;
+    }, 600);
     setActiveStep(idx);
     if (workflowScrollRef.current) {
       const container = workflowScrollRef.current;
@@ -125,7 +165,7 @@ export default function LandingPage() {
         stepElements[idx].scrollIntoView({
           behavior: 'smooth',
           block: 'nearest',
-          inline: 'start',
+          inline: 'center',
         });
       }
     }
@@ -595,6 +635,7 @@ export default function LandingPage() {
         {/* Scrollable / Interactive Workflow Cards Container */}
         <div
           ref={workflowScrollRef}
+          onScroll={handleWorkflowScroll}
           className="flex overflow-x-auto gap-6 pb-6 pt-2 snap-x snap-mandatory hide-scrollbar"
         >
           {WORKFLOW_STEPS.map((item, idx) => (

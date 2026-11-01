@@ -23,7 +23,9 @@ public class SimilarityCalculator {
         Map.entry("machinelearning", Set.of("ml")),
         Map.entry("ml", Set.of("machinelearning")),
         Map.entry("rest", Set.of("restful")),
-        Map.entry("restful", Set.of("rest"))
+        Map.entry("restful", Set.of("rest")),
+        Map.entry("restapi", Set.of("restapis", "restful")),
+        Map.entry("restapis", Set.of("restapi", "restful"))
     );
 
     /**
@@ -144,6 +146,20 @@ public class SimilarityCalculator {
         List<String> adjacentTokens = new ArrayList<>(Math.max(0, n - 1));
         for (int i = 0; i < n - 1; i++) {
             adjacentTokens.add(canonicalize(rawTokens.get(i) + " " + rawTokens.get(i + 1)));
+        }
+
+        if (canonicalKw.equals("restapi") || canonicalKw.equals("restapis")) {
+            for (String ct : canonicalTokens) {
+                if ("restful".equals(ct)) return true;
+            }
+            for (int i = 0; i < n - 1; i++) {
+                String first = canonicalize(rawTokens.get(i));
+                String second = canonicalize(rawTokens.get(i + 1));
+                if ("rest".equals(first) && ("api".equals(second) || "apis".equals(second))) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         // 1. Exact canonical match: single token or two adjacent tokens joined

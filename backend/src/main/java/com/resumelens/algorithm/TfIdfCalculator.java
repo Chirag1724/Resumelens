@@ -95,7 +95,7 @@ public class TfIdfCalculator {
         "models", "model", "data",
         // Keyword noise additions
         "engineer", "engineers", "practices", "practice", "evaluate",
-        "techniques", "technique", "science", "apache", "computer science"
+        "techniques", "technique", "science", "apache", "computer science", "api", "apis"
     )));
 
     public static final Set<String> JD_FILLER = GENERIC_WORDS;
@@ -550,16 +550,24 @@ public class TfIdfCalculator {
                     validAfter = false;
                 }
 
+                int matchEnd = endIdx;
+                if (!validAfter && skill.equals("rest api") && endIdx < lower.length() && lower.charAt(endIdx) == 's') {
+                    if (endIdx + 1 == lower.length() || !Character.isLetterOrDigit(lower.charAt(endIdx + 1))) {
+                        validAfter = true;
+                        matchEnd = endIdx + 1;
+                    }
+                }
+
                 if (validBefore && validAfter) {
                     boolean overlaps = false;
                     for (SpanMatch sm : spans) {
-                        if (idx < sm.end && endIdx > sm.start) {
+                        if (idx < sm.end && matchEnd > sm.start) {
                             overlaps = true;
                             break;
                         }
                     }
                     if (!overlaps) {
-                        spans.add(new SpanMatch(idx, endIdx, skill));
+                        spans.add(new SpanMatch(idx, matchEnd, skill));
                     }
                 }
                 fromIdx = idx + 1;

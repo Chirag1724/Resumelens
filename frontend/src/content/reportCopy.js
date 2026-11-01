@@ -26,6 +26,14 @@ export const VERDICTS = {
   },
 };
 
+export const QUALITY_ONLY_VERDICT = {
+  headline: 'Resume quality check',
+  body: 'We checked your formatting, writing and results. Paste the full job posting to see how well you match the job.',
+  note: "This score reflects your resume's quality only. We could not find specific skills in the job description, so the job match is not included.",
+};
+
+VERDICTS.QUALITY_ONLY = QUALITY_ONLY_VERDICT;
+
 export const CATEGORIES = {
   ATS_COMPATIBILITY: {
     label: 'ATS compatibility',
@@ -264,6 +272,32 @@ export const RISK_COPY = {
 
 export const RISKS = RISK_COPY;
 
+export const SUGGESTION_COPY = {
+  WEAK_VERBS: {
+    title: 'Replace weak phrases',
+    why: 'Phrases like worked on or responsible for describe duties, not results.',
+    how: 'Start each bullet with a direct action verb such as led, built or improved.',
+    effort: 'QUICK',
+  },
+  QUANTIFY: {
+    title: 'Add numbers to your bullets',
+    why: 'Numbers make your results concrete and easy to scan.',
+    how: 'Pick your three strongest bullets and add a number to each: users, percent, time saved or team size.',
+    effort: 'CONTENT',
+    example: {
+      before: 'Built a login system',
+      after: 'Built a login system used by 6,000 students',
+    },
+  },
+  STRUCTURE: {
+    title: 'Check your section headings and contact details',
+    why: 'Your ATS compatibility score is below 70.',
+    how: 'Use plain headings and put your contact details at the top.',
+    effort: 'QUICK',
+    exampleLabel: 'Example',
+  },
+};
+
 export const TIER_RANGES = {
   EXCELLENT: '85 and above',
   STRONG: '70 to 84',
@@ -284,11 +318,13 @@ export const GLOSSARY = {
 
 export default {
   VERDICTS,
+  QUALITY_ONLY_VERDICT,
   CATEGORIES,
   EFFORT,
   IMPORTANCE,
   RISK_COPY,
   RISKS,
+  SUGGESTION_COPY,
   TIER_RANGES,
   DISCLAIMER,
   GLOSSARY,

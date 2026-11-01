@@ -63,12 +63,33 @@ export const register = (payload) => client.post('/auth/register', payload);
 
 export const login = (payload) => client.post('/auth/login', payload);
 
-export const uploadResume = (formData) =>
-  client.post('/resumes/upload', formData, {
+export const uploadResume = (formDataOrPayload) => {
+  if (formDataOrPayload instanceof FormData) {
+    return client.post('/resumes/upload', formDataOrPayload, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  }
+  const formData = new FormData();
+  if (formDataOrPayload && typeof formDataOrPayload === 'object') {
+    Object.entries(formDataOrPayload).forEach(([key, val]) => {
+      if (key === 'experienceYears') {
+        const trimmed = String(val ?? '').trim();
+        if (trimmed !== '' && !isNaN(Number(trimmed))) {
+          formData.append(key, parseInt(trimmed, 10));
+        }
+      } else if (val !== null && val !== undefined && val !== '') {
+        formData.append(key, val);
+      }
+    });
+  }
+  return client.post('/resumes/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
+};
 
 /**
  * @typedef {Object} AnalysisResponse

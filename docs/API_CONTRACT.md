@@ -383,6 +383,14 @@ All analysis and report retrieval endpoints use unguessable UUIDs as public capa
 | `risks` | `List<RiskResponse>` | 0-16 items | Scoring risks derived from triggered rules, ordered by severity (`HIGH`, `MEDIUM`, `LOW`) |
 | `improvementPrompt` | `String` | Formatted text | Copyable prompt formatted for external AI assistant |
 
+##### Empty Keyword List Behavior
+When the job description yields no extracted keywords:
+- `skillsScore` is set to `50.0` (neutral, non-penalizing).
+- No keyword density deduction (-15 or -8) or risk (`KEYWORD_DENSITY_BELOW_30`, `KEYWORD_DENSITY_30_TO_50`) is applied to `atsScore` or added to `risks`.
+- Job fit score capping is not applied (`scoreCapped` is `false`, and `overallScore` equals `uncappedScore`).
+- In `sectionScores`, `SKILLS_VALIDATION` returns empty lists `[]` for `matchedKeywords` and `missingKeywords`.
+- GET recomputation computes the identical result.
+
 ##### Risk Item Structure (`RiskResponse`)
 | Field | Type | Range / Format | Description |
 |:---|:---|:---|:---|

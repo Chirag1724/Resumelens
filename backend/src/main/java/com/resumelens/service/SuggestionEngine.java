@@ -116,7 +116,7 @@ public class SuggestionEngine {
             suggestions.add(new SuggestionResponse(
                 "HIGH",
                 "Replace weak action verbs",
-                "Found " + weakVerbLines.size() + " instance(s) of weak or passive phrasing. "
+                (weakVerbLines.size() == 1 ? "Found 1 instance of weak or passive phrasing. " : "Found " + weakVerbLines.size() + " instances of weak or passive phrasing. ")
                     + "Strong action verbs improve both readability and ATS scoring.",
                 weakVerbLines.get(0),
                 "WEAK_VERBS"
@@ -127,7 +127,7 @@ public class SuggestionEngine {
             suggestions.add(new SuggestionResponse(
                 "MEDIUM",
                 "Quantify your achievements",
-                unquantifiedBullets.size() + " bullet point(s) lack measurable outcomes. "
+                (unquantifiedBullets.size() == 1 ? "1 bullet point lacks a measurable outcome. " : unquantifiedBullets.size() + " bullet points lack measurable outcomes. ")
                     + "Adding numbers, percentages, or scale significantly increases impact score.",
                 "E.g.: \"Reduced build time by 40%\" or \"Managed a team of 8 engineers\"",
                 "QUANTIFY"

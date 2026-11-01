@@ -37,6 +37,8 @@ After computing the weighted sum, cap the overall score using the Skills Validat
 - **From 40 up to but not including 60**: caps the overall score at **69.0**.
 - **60 or above**: applies no cap (`overallScore = uncappedScore`).
 
+When the extracted JD keyword list is empty, the job fit cap is not applied (scoreCapped is false, and overallScore equals uncappedScore).
+
 The overall status label derives from the capped score.
 The API response returns:
 - `uncappedScore`: the plain weighted sum, rounded to two decimal places.
@@ -58,8 +60,8 @@ Apply the following **deductions** (non-cumulative caps noted where applicable):
 | Contact info block absent (email or phone not found) | -10 | |
 | Resume uses tables or multi-column layout (detected via parser heuristic) | -10 | |
 | Resume uses graphics, images, or non-standard fonts (detected via heuristic) | -8 | Graphics by displayed size: Replace the pixel size rule completely. For PDF, process each page content stream with a PDFStreamEngine subclass that handles the Do operator, including images nested in form XObjects, and read the drawn width and height in points from the current transformation matrix. Count an image only when both drawn width and drawn height are at least 72 points. Vector drawings and form XObjects without an image are never counted. For DOCX use the drawn extent of each inline or anchored picture (914400 EMU per inch) with the same 72 point rule. |
-| Keyword density below 30% of JD keywords present in resume | -15 | Threshold: fewer than 30% of extracted JD keywords found (canonical match or strict fuzzy match) |
-| Keyword density 30% to 50% | -8 | Partial penalty; only one of the two keyword density rules applies |
+| Keyword density below 30% of JD keywords present in resume | -15 | Threshold: fewer than 30% of extracted JD keywords found (canonical match or strict fuzzy match). If the extracted keyword list is empty, no deduction or risk is applied. |
+| Keyword density 30% to 50% | -8 | Partial penalty; only one of the two keyword density rules applies. If the extracted keyword list is empty, no deduction or risk is applied. |
 | No measurable achievements found | -5 | Fires only when no bullet or sentence in the whole resume text contains a standalone number (number followed by %, +, x, k, M or B, or any number of 2 or more digits not glued to letters) |
 | File with no extractable text (for example a scanned image PDF) | Rejected at upload with HTTP 422 and a clear message; no score is produced | |
 
@@ -94,7 +96,7 @@ The three required sections evaluated for the ATS Compatibility missing headings
    - It is not in the common English words set (over 300 words, including use, user, users, store, clean, style, code, web, backend, frontend, services, service, interfaces, applications, application, build, develop, design, write, work, through, stack, sprint, team, project, projects, system, systems, tools, tool, data, and similar common words).
    - It looks technical in the original job description text, meaning it contains a digit, dot, plus, hash or slash, or it is written in camel case or all capitals, or it is capitalized in the middle of a sentence.
    - The fill step is limited to 8 terms. If the dictionary step found fewer than 3 keywords, the technical shape rule is relaxed and the fill is limited to 10 terms so unusual job descriptions still get keywords. The maximum of 30 keywords stays.
-3. **Generic Words Filter**: Terms in the generic words set (over 190 words, including engineer, engineers, practices, practice, evaluate, techniques, technique, degree, bachelor, master, phd, field, science, apache, and the generic phrase "computer science") and tokens shorter than 3 characters are excluded from keyword extraction and never become keywords. Multiword skills "data science", "apache spark", and "apache kafka" are in skills.txt so they stay one keyword.
+3. **Generic Words Filter**: Terms in the generic words set (over 190 words, including engineer, engineers, practices, practice, evaluate, techniques, technique, degree, bachelor, master, phd, field, science, apache, api, apis, and the generic phrase "computer science") and tokens shorter than 3 characters are excluded from keyword extraction and never become keywords. Lone "api" or "apis" is never a keyword. Multiword skills "rest api", "data science", "apache spark", and "apache kafka" are in skills.txt so they stay one keyword.
 
 ### Matching Rules
 The substring contains rule and the global edit distance 2 rule are removed for all keywords.
@@ -113,6 +115,7 @@ The substring contains rule and the global edit distance 2 rule are removed for 
   - `kubernetes` and `k8s` match each other.
   - `machine learning` and `ml` match each other.
   - `rest` and `restful` match each other as a symmetric pair.
+  - Keyword `rest api` is matched by a resume that contains the adjacent words `rest` followed by `api` or `apis`, or the token `restful`.
 - **Version Suffixes**: A resume token with trailing digits (html5, css3, es6, python3, vue3, angular2) also matches a keyword equal to the token without the digits, only when at least 3 letters remain. Tokens such as s3, ec2 and mp3 are never stripped. This is one way only: resume token to keyword.
 - **Strict Fuzzy Matching**: Allowed only when the canonical keyword has at least 6 characters and the first two characters match:
   - Allowed edit distance is 1 for canonical length 6 to 8 characters.
@@ -126,6 +129,8 @@ totalJdSkills   = total extracted JD keywords (capped at 30)
 
 skillsScore = (matchedSkills / totalJdSkills) * 100
 ```
+
+If the extracted keyword list is empty (totalJdSkills == 0), skillsScore = 50.0 (neutral, like the project section rule when no projects exist), no cosine bonus is added, and no keyword density risk is recorded.
 
 Additionally, a **Cosine Similarity bonus** (up to +10 points, capped so total never exceeds 100) is applied:
 
@@ -294,7 +299,7 @@ All risk titles, descriptions, and fixes are maintained in a constant map (`RISK
 Actionable recommendations are generated in `SuggestionEngine`:
 - **"Review overall resume structure"**: Appears only when the ATS Compatibility section score is strictly below 70 (`atsScore < 70`), not when the overall score is low (e.g. overall score capped to 54 with ATS Compatibility 85 produces no structure suggestion; ATS Compatibility 60 produces it).
 - **"Add Missing Technical Keywords"**: Produced when missing keywords from Skills Validation are present.
-- **"Replace weak action verbs"**: Produced when weak verbs are detected in the resume text.
-- **"Quantify your achievements"**: Produced when bullets lack numbers or measurable outcomes.
+- **"Replace weak action verbs"**: Produced when weak verbs are detected in the resume text ("1 instance" or "N instances" with correct singular/plural grammar).
+- **"Quantify your achievements"**: Produced when bullets lack numbers or measurable outcomes ("1 bullet point lacks a measurable outcome" or "N bullet points lack measurable outcomes" with correct singular/plural grammar).
 - GET and POST return identical suggestions for the same result.
 

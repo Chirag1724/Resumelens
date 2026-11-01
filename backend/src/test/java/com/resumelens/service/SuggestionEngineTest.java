@@ -177,7 +177,7 @@ class SuggestionEngineTest {
                 .findFirst().orElseThrow();
 
         // The suggestion description must state the literal count 2
-        assertTrue(quantSuggestion.description().startsWith("2 bullet point(s) lack measurable outcomes."),
+        assertTrue(quantSuggestion.description().startsWith("2 bullet points lack measurable outcomes."),
                 "Suggestion count of bullets lacking numbers must equal the number of bullets without a standalone number");
     }
 
@@ -207,5 +207,66 @@ class SuggestionEngineTest {
         var structureSuggestion = suggestions.stream().filter(s -> "STRUCTURE".equals(s.code())).findFirst().orElseThrow();
         assertEquals("STRUCTURE", structureSuggestion.code());
         assertEquals("LOW", structureSuggestion.priority());
+    }
+
+    @Test
+    void should_useSingularGrammar_whenSingleBulletPointOrWeakVerbInstance() {
+        List<SuggestionResponse> suggestions = engine.generateTopSuggestions(
+                List.of(),
+                List.of("responsible for the backend"),
+                List.of("developed core functionality"),
+                80.0
+        );
+
+        SuggestionResponse weakVerb = suggestions.stream()
+                .filter(s -> "WEAK_VERBS".equals(s.code()))
+                .findFirst().orElseThrow();
+        assertEquals("Found 1 instance of weak or passive phrasing. Strong action verbs improve both readability and ATS scoring.",
+                weakVerb.description());
+
+        SuggestionResponse quantify = suggestions.stream()
+                .filter(s -> "QUANTIFY".equals(s.code()))
+                .findFirst().orElseThrow();
+        assertEquals("1 bullet point lacks a measurable outcome. Adding numbers, percentages, or scale significantly increases impact score.",
+                quantify.description());
+    }
+
+    @Test
+    void should_usePluralGrammar_whenTwoOrMoreBulletPointsOrWeakVerbInstances() {
+        List<String> weakVerbsTwo = List.of("responsible for backend", "helped with deployment");
+        List<String> bulletsTwo = List.of("bullet one", "bullet two");
+        List<SuggestionResponse> suggestionsTwo = engine.generateTopSuggestions(
+                List.of(),
+                weakVerbsTwo,
+                bulletsTwo,
+                80.0
+        );
+
+        SuggestionResponse weakVerbTwo = suggestionsTwo.stream()
+                .filter(s -> "WEAK_VERBS".equals(s.code()))
+                .findFirst().orElseThrow();
+        assertEquals("Found 2 instances of weak or passive phrasing. Strong action verbs improve both readability and ATS scoring.",
+                weakVerbTwo.description());
+
+        SuggestionResponse quantifyTwo = suggestionsTwo.stream()
+                .filter(s -> "QUANTIFY".equals(s.code()))
+                .findFirst().orElseThrow();
+        assertEquals("2 bullet points lack measurable outcomes. Adding numbers, percentages, or scale significantly increases impact score.",
+                quantifyTwo.description());
+
+        List<String> bulletsEleven = List.of(
+                "b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8", "b9", "b10", "b11"
+        );
+        List<SuggestionResponse> suggestionsEleven = engine.generateTopSuggestions(
+                List.of(),
+                List.of(),
+                bulletsEleven,
+                80.0
+        );
+        SuggestionResponse quantifyEleven = suggestionsEleven.stream()
+                .filter(s -> "QUANTIFY".equals(s.code()))
+                .findFirst().orElseThrow();
+        assertEquals("11 bullet points lack measurable outcomes. Adding numbers, percentages, or scale significantly increases impact score.",
+                quantifyEleven.description());
     }
 }
