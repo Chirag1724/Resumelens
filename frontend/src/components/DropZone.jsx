@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, X, AlertCircle, Loader2, CheckCircle2, Upload, Sparkles } from 'lucide-react';
+import { FileText, X, AlertCircle, Loader2, CheckCircle2, Upload, ArrowRight } from 'lucide-react';
 import PdfIcon from './PdfIcon';
 import DocumentMockup from './DocumentMockup';
 import { uploadResume, runAnalysis } from '../api/client';
@@ -438,7 +438,7 @@ export default function DropZone({ className = '' }) {
                   </>
                 ) : (
                   <>
-                    <Sparkles
+                    <ArrowRight
                       className={`w-4 h-4 transition-colors ${
                         !jobDescription.trim() ? 'text-neutral-500' : 'text-white'
                       }`}

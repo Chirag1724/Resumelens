@@ -111,21 +111,45 @@ Controller: `com.resumelens.controller.AuthController`
 - `400 Bad Request`: Validation failure (blank email/password, password < 8 characters) or email already registered (`"An account with this email already exists."`).
 - `500 Internal Server Error`: Generic internal server error.
 
-### 5.2 Delete History Item
-- **Method:** `DELETE`
-- **Path:** `/api/v1/history/{id}`
-- **Auth Requirement:** Authenticated (`.requestMatchers("/api/v1/history/**").authenticated()`)
-- **Headers:** `Authorization: Bearer <jwt_token>`
-- **Path Variable:** `id` (UUID string of the match result)
+### 2.3 OAuth Login
+- **Method:** `POST`
+- **Path:** `/api/v1/auth/oauth`
+- **Auth Requirement:** Guest / Public (`permitAll`)
+- **Headers:** `Content-Type: application/json`
 
-Deletes the target match result and its associated section scores. If no other match result references the associated resume, the resume is also deleted. Deletion is permitted only when the resume belongs to the authenticated caller.
+#### Request Body (`OAuthRequest`)
+```json
+{
+  "provider": "GOOGLE",
+  "email": "user@gmail.com",
+  "name": "Jane Doe",
+  "providerId": "google_1029384756"
+}
+```
+| Field | Type | Required | Constraints | Description |
+|:---|:---|:---|:---|:---|
+| `provider` | `String` | Yes | Must be "GOOGLE" or "GITHUB" (case-insensitive), not blank | External identity provider |
+| `email` | `String` | Yes | Valid email format, not blank | Authenticated email address |
+| `token` | `String` | No | Optional | OAuth token or credential payload |
+| `name` | `String` | No | Optional | Candidate display name |
+| `providerId` | `String` | No | Optional | External provider subject/user ID |
 
-#### Success Response (`204 No Content`)
-Empty response body.
+#### Success Response (`200 OK`)
+```json
+{
+  "success": true,
+  "message": "OK",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiJ9...",
+    "email": "user@gmail.com",
+    "name": "Jane Doe"
+  }
+}
+```
 
 #### Error Status Codes
-- `401 Unauthorized`: Missing or invalid bearer token.
-- `404 Not Found`: Match result public UUID not found or belongs to another user.
+- `400 Bad Request`: Unsupported provider (not GOOGLE or GITHUB) or missing email.
+- `500 Internal Server Error`: Generic internal server error.
 
 ---
 
@@ -492,6 +516,16 @@ Empty response body.
 |:---|:---|:---|:---|:---|
 | `templateStyle` | `String` | No | `"Simple Single-Column"` | Desired LaTeX template layout style |
 
+Supported `templateStyle` options:
+- `Jake's Resume (Overleaf Single-Column)`: Overleaf standard ATS-friendly single-column layout with clickable links.
+- `Rezume (Developer Clean & Clickable)`: Modern developer template by Nanu Panchamurthy with clickable contact links and tech skills tabular breakdown.
+- `Audric Minimalist (Tech Stack Header)`: Clean single-column layout by Audric Serador featuring dedicated tech stack tags.
+- `Simple Single-Column`: Standard clean single-column format.
+- `Awesome-CV`: Two-column modern curriculum vitae layout.
+- `Deedy Resume`: Dual-column publication style typesetting.
+
+All templates embed `\usepackage[hidelinks]{hyperref}` for interactive clickable links (`\href{url}{text}`) and `\input glyphtounicode \pdfgentounicode=1` to guarantee ATS readability.
+
 #### Success Response (`200 OK`)
 ```json
 {
@@ -581,7 +615,74 @@ Empty response body.
 
 ---
 
-## 6. Health Endpoint (`/api/v1/health`)
+## 6. User Management Endpoints (`/api/v1/user`)
+
+Controller: `com.resumelens.controller.UserController`
+
+### 6.1 Get User Profile
+- **Method:** `GET`
+- **Path:** `/api/v1/user/profile`
+- **Auth Requirement:** Authenticated (`.requestMatchers("/api/v1/user/**").authenticated()`)
+- **Headers:** `Authorization: Bearer <jwt_token>`
+
+#### Success Response (`200 OK`)
+```json
+{
+  "success": true,
+  "message": "OK",
+  "data": {
+    "email": "user@example.com",
+    "name": "Jane Doe",
+    "provider": "GOOGLE",
+    "createdAt": "2026-10-15T10:00:00",
+    "totalScans": 12
+  }
+}
+```
+| Response Field | Type | Description |
+|:---|:---|:---|
+| `email` | `String` | Registered user email |
+| `name` | `String` | User display name |
+| `provider` | `String` | Authentication provider (`LOCAL`, `GOOGLE`, `GITHUB`) |
+| `createdAt` | `String (ISO-8601)` | Account creation timestamp |
+| `totalScans` | `Long` | Total count of resumes analyzed by this user |
+
+#### Error Status Codes
+- `401 Unauthorized`: Missing, expired, or invalid bearer token.
+- `404 Not Found`: User record no longer exists.
+
+---
+
+### 6.2 Delete User Account
+- **Method:** `DELETE`
+- **Path:** `/api/v1/user/account`
+- **Auth Requirement:** Authenticated (`.requestMatchers("/api/v1/user/**").authenticated()`)
+- **Headers:** `Authorization: Bearer <jwt_token>`
+
+Permanently deletes the authenticated user's account and executes an atomic cascade deletion of all user-owned data:
+1. `SectionScore` entries linked to user match results.
+2. `MatchResult` records for all user resumes.
+3. `Resume` records uploaded by the user.
+4. `User` entity from the `users` table.
+
+Following deletion, the bearer token is invalidated and subsequent requests will return `401 Unauthorized`.
+
+#### Success Response (`200 OK`)
+```json
+{
+  "success": true,
+  "message": "OK",
+  "data": "Account and all associated evaluation data deleted successfully."
+}
+```
+
+#### Error Status Codes
+- `401 Unauthorized`: Missing or invalid bearer token.
+- `404 Not Found`: User record not found.
+
+---
+
+## 7. Health Endpoint (`/api/v1/health`)
 
 Controller: `com.resumelens.controller.HealthController`
 

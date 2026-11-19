@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -14,7 +15,7 @@ import {
   ArrowUpRight,
   AlertTriangle,
   RefreshCw,
-  Sparkles,
+  FileText,
   TrendingUp,
 } from 'lucide-react';
 import { getHistory } from '../api/client';
@@ -202,7 +203,7 @@ export default function HistoryPage() {
       {!loading && !error && items.length === 0 && (
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[18px] p-8 sm:p-12 text-center">
           <div className="w-14 h-14 rounded-full bg-[rgba(232,96,46,0.12)] border border-[rgba(232,96,46,0.25)] flex items-center justify-center mx-auto mb-5 text-[var(--brand-500)]">
-            <Sparkles className="w-7 h-7" aria-hidden="true" />
+            <FileText className="w-7 h-7" aria-hidden="true" />
           </div>
           <h2 className="font-heading font-bold text-xl text-[var(--text)] mb-2">
             No previous scans found

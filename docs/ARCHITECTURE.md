@@ -45,7 +45,7 @@ All three are Apache-licensed or AGPL (iText Community) with no paid-API require
 
 ## Frontend Structure
 
-**Technology:** React 18 + Vite + Tailwind CSS v4 + Axios + Recharts + Lucide React
+**Technology:** React 18 + Vite + Tailwind CSS v4 + Framer Motion + Lenis + Axios + Recharts + Lucide React
 
 ```
 frontend/
@@ -102,8 +102,9 @@ frontend/
     └── pages/
         ├── HistoryPage.jsx          # Protected evaluation history with score progression chart
         ├── LandingPage.jsx          # Landing page with hero intake, sample report, and features
-        ├── LoginPage.jsx            # Account login and registration forms
+        ├── LoginPage.jsx            # Account login, OAuth, and registration forms
         ├── Placeholders.jsx         # Fallback placeholder views including NotFoundPage
+        ├── ProfilePage.jsx          # User profile, metrics, and danger zone account deletion
         └── ReportPage.jsx           # Analysis report view with full breakdown and actions
 ```
 
@@ -135,7 +136,8 @@ backend/
     │   ├── AuthController.java
     │   ├── HealthController.java
     │   ├── HistoryController.java
-    │   └── ResumeController.java
+    │   ├── ResumeController.java
+    │   └── UserController.java
     │
     ├── dto/                                # API request/response objects
     │   ├── request/
@@ -211,6 +213,8 @@ A line is recognized as a section heading only when it meets strict boundary rul
 | `email` | VARCHAR(255) | UNIQUE, NOT NULL |
 | `password_hash` | VARCHAR(255) | NOT NULL |
 | `name` | VARCHAR(100) | |
+| `provider` | VARCHAR(50) | DEFAULT 'LOCAL' |
+| `provider_id` | VARCHAR(255) | NULLABLE |
 | `created_at` | DATETIME | DEFAULT NOW() |
 | `updated_at` | DATETIME | |
 
@@ -301,6 +305,13 @@ All endpoints are prefixed: `/api/v1`
 |--------|------|------|-------------|
 | `POST` | `/api/v1/auth/register` | Public (Guest) | Register a new user account with email, password, and optional name. Returns JWT. |
 | `POST` | `/api/v1/auth/login` | Public (Guest) | Authenticate user credentials and receive JWT bearer token. |
+| `POST` | `/api/v1/auth/oauth` | Public (Guest) | Authenticate via Google or GitHub OAuth payload and receive JWT bearer token. |
+
+### User Management (`/api/v1/user`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/v1/user/profile` | Authenticated | Retrieves current user profile details, authentication provider, creation date, and total scans count. |
+| `DELETE` | `/api/v1/user/account` | Authenticated | Permanently cascade deletes user account, all resumes, match results, and section scores. |
 
 ### History (`/api/v1/history`)
 | Method | Path | Auth | Description |
@@ -319,3 +330,4 @@ All endpoints are prefixed: `/api/v1`
 - **Document Ingestion:** Original PDF and DOCX files are parsed in memory and discarded. Only extracted text is persisted in PostgreSQL to enable capability URL report retrieval (`/report/:id`).
 - **Guest Retention Cleanup:** A daily scheduled job (`RetentionService`) deletes guest resumes (where user is null), their match results, and section scores older than `RETENTION_DAYS` (default 7 days).
 - **Owner Deletion:** Authenticated users can delete individual evaluations and their associated data via `DELETE /api/v1/history/{id}`.
+- **Self-Service Account Deletion:** Authenticated users can permanently delete their entire account and all associated resumes, match results, and section scores via `DELETE /api/v1/user/account` with an explicit confirmation step ("DELETE") in the UI.

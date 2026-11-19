@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getFixPrompt } from '../api/client';
-import { X, Copy, Check, Sparkles, Loader2, RefreshCw } from 'lucide-react';
+import { X, Copy, Check, Loader2, RefreshCw } from 'lucide-react';
 
 /**
  * FixPromptModal: Modal dialog for fetching and copying an AI resume improvement
@@ -13,7 +13,7 @@ import { X, Copy, Check, Sparkles, Loader2, RefreshCw } from 'lucide-react';
  * @param {string} props.analysisId - UUID of the match result to fetch the fix prompt for
  */
 export default function FixPromptModal({ isOpen, onClose, analysisId }) {
-  const [templateStyle, setTemplateStyle] = useState('Simple Single-Column');
+  const [templateStyle, setTemplateStyle] = useState("Jake's Resume (Overleaf Single-Column)");
   const [promptText, setPromptText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -166,8 +166,7 @@ export default function FixPromptModal({ isOpen, onClose, analysisId }) {
         <div className="flex items-start justify-between gap-4 pb-4 border-b border-[var(--border)]">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Sparkles className="w-4 h-4 text-[var(--brand-500)]" aria-hidden="true" />
-              <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--text-secondary)]">
+              <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--brand-500)] font-semibold">
                 AI Improvement Prompt
               </span>
             </div>
@@ -204,6 +203,9 @@ export default function FixPromptModal({ isOpen, onClose, analysisId }) {
             disabled={loading}
             className="px-3 py-1.5 rounded-[9px] bg-[var(--bg-elevated)] border border-[var(--border)] text-xs text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-400)] cursor-pointer"
           >
+            <option value="Jake's Resume (Overleaf Single-Column)">Jake's Resume (Overleaf Single-Column)</option>
+            <option value="Rezume (Developer Clean & Clickable)">Rezume (Developer Clean & Clickable)</option>
+            <option value="Audric Minimalist (Tech Stack Header)">Audric Minimalist (Tech Stack Header)</option>
             <option value="Simple Single-Column">Simple Single-Column</option>
             <option value="Awesome-CV">Awesome-CV</option>
             <option value="Deedy Resume">Deedy Resume</option>

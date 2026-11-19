@@ -1,3 +1,4 @@
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ReactLenis, useLenis } from 'lenis/react';
@@ -10,6 +11,7 @@ import LoginPage from './pages/LoginPage';
 import LandingPage from './pages/LandingPage';
 import ReportPage from './pages/ReportPage';
 import HistoryPage from './pages/HistoryPage';
+import ProfilePage from './pages/ProfilePage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import { NotFoundPage } from './pages/Placeholders';
@@ -83,6 +85,14 @@ function TopBar() {
           >
             History
           </Link>
+          {isAuthenticated && (
+            <Link
+              to="/profile"
+              className="text-neutral-300 hover:text-white transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-500)] rounded-md py-1"
+            >
+              Profile
+            </Link>
+          )}
         </div>
 
         {/* Right: User Email / Auth Controls */}
@@ -151,6 +161,15 @@ function TopBar() {
           >
             History
           </Link>
+          {isAuthenticated && (
+            <Link
+              to="/profile"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-base font-semibold text-neutral-300 hover:text-white transition-colors duration-150 py-2"
+            >
+              Profile
+            </Link>
+          )}
           {isAuthenticated ? (
             <div className="pt-3 border-t border-white/10 flex flex-col gap-2.5">
               <span className="text-xs text-neutral-400 font-mono truncate">
@@ -234,71 +253,90 @@ export default function App() {
             aria-hidden="true"
           />
           <TopBar />
-          <main
-            className={`flex-1 w-full ${
-              isHome || isAuth ? '' : 'pt-24 sm:pt-28'
-            } ${isAuth ? 'h-full max-h-screen overflow-hidden' : ''}`}
-          >
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  <ErrorBoundary pageName="Home">
-                    <LandingPage />
-                  </ErrorBoundary>
-                }
-              />
-              <Route
-                path="/login"
-                element={
-                  <ErrorBoundary pageName="Login">
-                    <LoginPage />
-                  </ErrorBoundary>
-                }
-              />
-              <Route
-                path="/report/:id"
-                element={
-                  <ErrorBoundary pageName="Report">
-                    <ReportPage />
-                  </ErrorBoundary>
-                }
-              />
-              <Route
-                path="/history"
-                element={
-                  <ProtectedRoute>
-                    <ErrorBoundary pageName="History">
-                      <HistoryPage />
-                    </ErrorBoundary>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/privacy"
-                element={
-                  <ErrorBoundary pageName="Privacy">
-                    <PrivacyPage />
-                  </ErrorBoundary>
-                }
-              />
-              <Route
-                path="/terms"
-                element={
-                  <ErrorBoundary pageName="Terms">
-                    <TermsPage />
-                  </ErrorBoundary>
-                }
-              />
-              <Route
-                path="*"
-                element={
-                  <ErrorBoundary pageName="Not Found">
-                    <NotFoundPage />
-                  </ErrorBoundary>
-                }
-              />
-            </Routes>
+          <main className="flex-1 w-full flex flex-col">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                className={`w-full flex-1 flex flex-col ${
+                  isHome || isAuth ? '' : 'pt-24 sm:pt-28'
+                } ${isAuth ? 'h-full max-h-screen overflow-hidden' : ''}`}
+              >
+                <Routes location={location}>
+                  <Route
+                    path="/"
+                    element={
+                      <ErrorBoundary pageName="Home">
+                        <LandingPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/login"
+                    element={
+                      <ErrorBoundary pageName="Login">
+                        <LoginPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/report/:id"
+                    element={
+                      <ErrorBoundary pageName="Report">
+                        <ReportPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/history"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary pageName="History">
+                          <HistoryPage />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary pageName="Profile">
+                          <ProfilePage />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/privacy"
+                    element={
+                      <ErrorBoundary pageName="Privacy">
+                        <PrivacyPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/terms"
+                    element={
+                      <ErrorBoundary pageName="Terms">
+                        <TermsPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="*"
+                    element={
+                      <ErrorBoundary pageName="Not Found">
+                        <NotFoundPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                </Routes>
+              </motion.div>
+            </AnimatePresence>
           </main>
           {!isAuth && <Footer />}
           <SitePreferences />

@@ -63,6 +63,12 @@ export const register = (payload) => client.post('/auth/register', payload);
 
 export const login = (payload) => client.post('/auth/login', payload);
 
+export const oauthLogin = (payload) => client.post('/auth/oauth', payload);
+
+export const getUserProfile = () => client.get('/user/profile');
+
+export const deleteUserAccount = () => client.delete('/user/account');
+
 export const uploadResume = (formDataOrPayload) => {
   if (formDataOrPayload instanceof FormData) {
     return client.post('/resumes/upload', formDataOrPayload, {

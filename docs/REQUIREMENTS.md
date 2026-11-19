@@ -85,6 +85,15 @@ The system calculates scores (0.00 to 100.00) across six discrete dimensions str
 - Users can download an official PDF report via `GET /api/v1/analysis/{id}/report`.
 - Server-side PDF generation using clean typography, score tier indicators, section breakdown, and risk summaries.
 
+#### FR-9: OAuth 2.0 and Self-Service Account Lifecycle
+- Fast authentication via Google and GitHub OAuth alongside standard email/password credentials.
+- Account profile dashboard with real-time scan metrics.
+- Complete cascade self-service account termination via `DELETE /api/v1/user/account` requiring typed "DELETE" confirmation.
+
+#### FR-10: Clickable Overleaf ATS LaTeX Templates
+- Integrated developer templates (Jake's Resume, Rezume, Audric Minimalist) embedding clickable ATS hyperlinks (`\usepackage[hidelinks]{hyperref}`, `\pdfgentounicode=1`, and `\href{url}{text}`).
+- Fix prompts allow choosing specific Overleaf templates for target formatting.
+
 ---
 
 ## 3. Frontend Page Specifications
@@ -194,6 +203,12 @@ Page structure, design tokens, and interactions match [FRONTEND_DESIGN.md](file:
 - Historical cards displaying scan date, file name, target role, and score with tier label.
 - Overall score over time line chart (hidden until 2 or more historical scan entries exist).
 - Empty state with direct link to upload page when no scans are present.
+
+### 3.5 Account Profile Page (`/profile`)
+- Available to logged-in users only.
+- Displays user identity, registered email, authentication provider badge (Google, GitHub, or Local), and total scans count.
+- Danger Zone providing self-service account termination.
+- Deletion requires explicit confirmation modal where the user must type "DELETE" before triggering an atomic cascade purge across all resumes, scores, and user records.
 
 ---
 

@@ -9,6 +9,8 @@ import java.util.UUID;
 
 public interface ResumeRepository extends JpaRepository<Resume, Long> {
     Optional<Resume> findByPublicId(UUID publicId);
+    List<Resume> findByUserId(Long userId);
+    long countByUserId(Long userId);
     List<Resume> findByUserIdOrderByUploadedAtDesc(Long userId);
     List<Resume> findByUserIsNullAndUploadedAtBefore(LocalDateTime cutoff);
 }

@@ -32,6 +32,13 @@ app:
     secret: ${JWT_SECRET}
     expiration-ms: 86400000   # 24 hours
   retention-days: ${RETENTION_DAYS:7}
+  oauth:
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}
+    github:
+      client-id: ${GITHUB_CLIENT_ID:}
+      client-secret: ${GITHUB_CLIENT_SECRET:}
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}

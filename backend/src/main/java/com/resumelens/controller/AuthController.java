@@ -1,6 +1,7 @@
 package com.resumelens.controller;
 
 import com.resumelens.dto.request.AuthRequest;
+import com.resumelens.dto.request.OAuthRequest;
 import com.resumelens.dto.response.ApiResponse;
 import com.resumelens.dto.response.AuthResponse;
 import com.resumelens.service.UserService;
@@ -28,6 +29,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody AuthRequest request) {
         AuthResponse response = userService.login(request.email(), request.password());
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/oauth")
+    public ResponseEntity<ApiResponse<AuthResponse>> oauthLogin(@Valid @RequestBody OAuthRequest request) {
+        AuthResponse response = userService.oauthLogin(request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

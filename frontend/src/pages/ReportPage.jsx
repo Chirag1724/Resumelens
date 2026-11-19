@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getAnalysis, downloadReport } from '../api/client';
@@ -221,25 +222,74 @@ export default function ReportPage() {
         <ReportNav />
 
         {/* Section 1: Overview */}
-        <OverviewSection data={data} />
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.12 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <OverviewSection data={data} />
+        </motion.div>
 
         {/* Section 2: Action plan */}
-        <ActionPlanSection data={data} />
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.12 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <ActionPlanSection data={data} />
+        </motion.div>
 
         {/* Section 3: Job match */}
-        <JobMatchSection data={data} />
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.12 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <JobMatchSection data={data} />
+        </motion.div>
 
         {/* Section 4: Score breakdown */}
-        <ScoreBreakdownSection data={data} />
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.12 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <ScoreBreakdownSection data={data} />
+        </motion.div>
 
         {/* Section 5: Things to fix */}
-        <ThingsToFixSection data={data} />
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.12 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <ThingsToFixSection data={data} />
+        </motion.div>
 
         {/* Section 6: Details */}
-        <DetailsSection data={data} />
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.12 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <DetailsSection data={data} />
+        </motion.div>
 
         {/* Section 7: Next steps */}
-        <NextStepsSection onImproveClick={() => setIsModalOpen(true)} />
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.12 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <NextStepsSection onImproveClick={() => setIsModalOpen(true)} />
+        </motion.div>
       </main>
 
       {/* Improvement Prompt Modal */}

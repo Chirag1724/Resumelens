@@ -34,7 +34,9 @@ The score reflects how well a resume performs against automated screening system
 - **Keyword Gap Analysis**: Categorized breakdown of matched skills vs. missing target keywords.
 - **ATS Risk Flags**: Automatic detection of parsing pitfalls, non-standard section headings, table usage, and missing contact info.
 - **Interactive UI & Visualizer**: Glassmorphic dark-mode web application with real-time scan animation and SVG score gauges.
-- **AI Fix-Prompt Generator**: Structured prompts ready to copy into external assistants for customized bullet-point rewriting.
+- **AI Fix-Prompt Generator**: Structured prompts with 3 Overleaf templates (Jake's Resume, Rezume, Audric Minimalist) embedding clickable ATS hyperlinks (`\href{...}{...}`) and `\pdfgentounicode=1`.
+- **Google & GitHub OAuth**: Fast, secure sign-in via Google and GitHub OAuth alongside standard credentials.
+- **User Profile & Cascade Deletion**: Account settings with total scan metrics and self-service account deletion backed by an atomic cascade purge and confirmation modal.
 - **PDF Report Export**: Downloadable evaluation summary for offline candidate or job-seeker review.
 
 ---
@@ -163,7 +165,7 @@ docker compose down
 All mathematical algorithms, edge cases, and endpoints are covered by comprehensive unit and integration test suites:
 
 ```bash
-# Backend Test Suite (174 tests)
+# Backend Test Suite (204 tests)
 cd backend
 ./mvnw test
 

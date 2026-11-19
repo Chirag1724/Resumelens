@@ -72,8 +72,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/health").permitAll()
                 // Swagger UI & OpenAPI documentation
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs").permitAll()
-                // History requires authentication
+                // Authenticated user endpoints
                 .requestMatchers("/api/v1/history/**").authenticated()
+                .requestMatchers("/api/v1/user/**").authenticated()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

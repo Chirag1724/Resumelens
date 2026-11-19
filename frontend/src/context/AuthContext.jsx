@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   login as apiLogin,
   register as apiRegister,
+  oauthLogin as apiOAuthLogin,
+  deleteUserAccount as apiDeleteAccount,
   setAuthToken,
   setOnUnauthorized,
 } from '../api/client';
@@ -55,6 +57,23 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const loginWithOAuth = async (oauthData) => {
+    const data = await apiOAuthLogin(oauthData);
+    if (data?.token) {
+      setToken(data.token);
+      setUserEmail(data.email);
+      setUserName(data.name || null);
+      setAuthToken(data.token);
+    }
+    return data;
+  };
+
+  const deleteAccount = async () => {
+    await apiDeleteAccount();
+    clearSession();
+    navigate('/login');
+  };
+
   const logout = () => {
     clearSession();
     navigate('/login');
@@ -67,6 +86,8 @@ export function AuthProvider({ children }) {
     isAuthenticated: Boolean(token),
     login,
     register,
+    loginWithOAuth,
+    deleteAccount,
     logout,
   };
 
